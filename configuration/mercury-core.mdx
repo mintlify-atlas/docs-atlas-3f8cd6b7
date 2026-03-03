@@ -1,0 +1,462 @@
+---
+title: 'mercury.core.ts'
+description: 'Core configuration file for Mercury Core'
+---
+
+The `mercury.core.ts` file is the main configuration file for Mercury Core. This file controls all aspects of your revival including branding, features, services, and default settings.
+
+<Warning>
+If you're running in production, you'll need to rebuild Mercury Core to apply changes to this file.
+</Warning>
+
+## Basic Settings
+
+<ParamField path="Name" type="string" required>
+  The name of your revival.
+  
+  ```typescript
+  Name: "Mercury"
+  ```
+</ParamField>
+
+<ParamField path="Domain" type="string" required>
+  Your revival's domain name.
+  
+  ```typescript
+  Domain: "mercs.dev"
+  ```
+</ParamField>
+
+<ParamField path="CurrencySymbol" type="string" required>
+  The symbol for your revival's currency. Placed before the amount.
+  
+  ```typescript
+  CurrencySymbol: "屌"
+  ```
+</ParamField>
+
+<ParamField path="Pages" type="array" required>
+  Controls which optional pages on the site are enabled. This allows you to turn off unnecessary features for your revival.
+  
+  Available pages: `"Statistics"`, `"Groups"`, `"Forum"`
+  
+  ```typescript
+  Pages: ["Statistics", "Forum", "Groups"]
+  ```
+</ParamField>
+
+## Service URLs
+
+<ParamField path="DatabaseURL" type="string" required>
+  The URL of your database server.
+  
+  ```typescript
+  DatabaseURL: "http://localhost:8000"
+  ```
+</ParamField>
+
+<ParamField path="RCCServiceProxyURL" type="string" required>
+  The URL of your RCC proxy server. Requires a URL scheme.
+  
+  ```typescript
+  RCCServiceProxyURL: "http://localhost:64990"
+  ```
+</ParamField>
+
+<ParamField path="OrbiterPrivateURL" type="string" required>
+  The URL of your Orbiter gameserver hoster, exposing the private API for use by the Site. Requires a URL scheme.
+  
+  ```typescript
+  OrbiterPrivateURL: "http://localhost:64991"
+  ```
+</ParamField>
+
+<ParamField path="OrbiterPublicDomain" type="string" required>
+  The domain name of your Orbiter gameserver hoster, exposing the public API for use by a user's browser.
+  
+  ```typescript
+  OrbiterPublicDomain: "localhost:64992"
+  ```
+</ParamField>
+
+<ParamField path="LauncherURI" type="string" required>
+  The URI scheme to pass to the launcher when joining a game.
+  
+  ```typescript
+  LauncherURI: "mercury-launcher:"
+  ```
+</ParamField>
+
+## Default Body Colors
+
+<ParamField path="DefaultBodyColors" type="object" required>
+  The default body colours for avatar creation, given to each new user on registration. Each colour is a BrickColor ID.
+  
+  ```typescript
+  DefaultBodyColors: {
+    Head: 24,
+    LeftArm: 24,
+    LeftLeg: 119,
+    RightArm: 24,
+    RightLeg: 119,
+    Torso: 23,
+  }
+  ```
+  
+  <Expandable title="Body color properties">
+    <ParamField path="DefaultBodyColors.Head" type="number" required>
+      The default head colour.
+    </ParamField>
+    
+    <ParamField path="DefaultBodyColors.LeftArm" type="number" required>
+      The default left arm colour.
+    </ParamField>
+    
+    <ParamField path="DefaultBodyColors.LeftLeg" type="number" required>
+      The default left leg colour.
+    </ParamField>
+    
+    <ParamField path="DefaultBodyColors.RightArm" type="number" required>
+      The default right arm colour.
+    </ParamField>
+    
+    <ParamField path="DefaultBodyColors.RightLeg" type="number" required>
+      The default right leg colour.
+    </ParamField>
+    
+    <ParamField path="DefaultBodyColors.Torso" type="number" required>
+      The default torso colour.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Logging
+
+<ParamField path="Logging" type="object" required>
+  Configuration for logging done by Mercury Core.
+  
+  ```typescript
+  Logging: {
+    Requests: true,
+    FormattedErrors: false,
+    Time: true,
+  }
+  ```
+  
+  <Expandable title="Logging properties">
+    <ParamField path="Logging.Requests" type="boolean" required>
+      Whether to log all incoming requests to dynamic pages.
+    </ParamField>
+    
+    <ParamField path="Logging.FormattedErrors" type="boolean" required>
+      Whether to format errors in a more readable way. This does not provide a full stack trace.
+    </ParamField>
+    
+    <ParamField path="Logging.Time" type="boolean" required>
+      Whether to log the time of each request.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Branding
+
+<ParamField path="Branding" type="object" required>
+  Configuration for custom branding and icon file paths in the Assets directory.
+  
+  ```typescript
+  Branding: {
+    Favicon: "Branding/Favicon.svg",
+    Icon: "Branding/Icon.svg",
+    Tagline: "Revival tagline",
+    Descriptions: {
+      "Endless possibilites":
+        "Create or play your favourite games and customise your character with items on our catalog.",
+      "New features":
+        "In addition to full client usability, additional features such as security fixes, QoL fixes and an easy to use website make your experience better.",
+      "Same nostalgia":
+        "All of our clients will remain as vanilla as possible, to make sure it's exactly as you remember it.",
+    },
+  }
+  ```
+  
+  <Expandable title="Branding properties">
+    <ParamField path="Branding.Favicon" type="string" required>
+      Path to your revival's favicon in the Assets directory. May be in any browser-supported format.
+    </ParamField>
+    
+    <ParamField path="Branding.Icon" type="string" required>
+      Path to your revival's logo icon in the Assets directory. May be in any browser-supported format.
+    </ParamField>
+    
+    <ParamField path="Branding.Tagline" type="string" required>
+      A very short tagline for your revival. This is displayed in the footer as well as on the login and register pages.
+      
+      If set to an empty string, this does not display.
+    </ParamField>
+    
+    <ParamField path="Branding.Descriptions" type="object" required>
+      Descriptions for your revival's features. These are displayed on the register page.
+      
+      Each description is a key-value pair, where the key is a feature's title and the value is its description.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+See the [Branding](/configuration/branding) page for more details.
+
+## Images
+
+<ParamField path="Images" type="object" required>
+  Configuration for image file paths in the Assets directory.
+  
+  ```typescript
+  Images: {
+    DefaultPlaceIcons: ["Images/DefaultIcon1.avif"],
+    DefaultPlaceThumbnails: [
+      "Images/DefaultThumbnail1.avif",
+      "Images/DefaultThumbnail2.avif",
+      "Images/DefaultThumbnail3.avif",
+    ],
+  }
+  ```
+  
+  <Expandable title="Image properties">
+    <ParamField path="Images.DefaultPlaceIcons" type="string[]" required>
+      Array of paths for default place icons in the Assets directory. May be in any browser-supported format.
+    </ParamField>
+    
+    <ParamField path="Images.DefaultPlaceThumbnails" type="string[]" required>
+      Array of paths for default place thumbnails in the Assets directory. May be in any browser-supported format.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Themes
+
+<ParamField path="Themes" type="array" required>
+  Configuration for the revival's available themes. The first theme in the array will be the default theme.
+  
+  ```typescript
+  Themes: [
+    {
+      Name: "Standard",
+      Path: "Themes/Standard.css",
+    },
+  ]
+  ```
+  
+  <Expandable title="Theme properties">
+    <ParamField path="Themes[].Name" type="string" required>
+      The name of the theme.
+    </ParamField>
+    
+    <ParamField path="Themes[].Path" type="string" required>
+      Path to the theme's CSS file in the Assets directory.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Text Filtering
+
+<ParamField path="Filtering" type="object" required>
+  Configuration for basic text filtering for profanity.
+  
+  ```typescript
+  Filtering: {
+    FilteredWords: [],
+    ReplaceWith: "#",
+    ReplaceType: "Character",
+  }
+  ```
+  
+  <Expandable title="Filtering properties">
+    <ParamField path="Filtering.FilteredWords" type="string[]" required>
+      Array of words to naively filter out of text (where surrounded by whitespace). You may wish to pass this in from a package or JSON file.
+      
+      Set to a blank array to disable filtering.
+    </ParamField>
+    
+    <ParamField path="Filtering.ReplaceWith" type="string" required>
+      The character of which to replace filtered words with.
+    </ParamField>
+    
+    <ParamField path="Filtering.ReplaceType" type="'Character' | 'Word'" required>
+      How to replace filtered words, either by replacing each character or replacing the entire word with ReplaceWith.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Registration
+
+<ParamField path="Registration" type="object" required>
+  Configuration for user registration.
+  
+  ```typescript
+  Registration: {
+    Keys: {
+      Enabled: true,
+      Prefix: "mercurkey-",
+    },
+    Emails: true,
+  }
+  ```
+  
+  <Expandable title="Registration properties">
+    <ParamField path="Registration.Keys" type="object" required>
+      Configuration for how registration keys are used and generated.
+      
+      <Expandable title="Keys properties">
+        <ParamField path="Registration.Keys.Enabled" type="boolean" required>
+          Whether registration keys are enabled.
+        </ParamField>
+        
+        <ParamField path="Registration.Keys.Prefix" type="string" required>
+          Prefix for registration keys. This is used to identify keys generated by your revival.
+        </ParamField>
+      </Expandable>
+    </ParamField>
+    
+    <ParamField path="Registration.Emails" type="boolean" required>
+      Whether to ask for and require email addresses for registration.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Email
+
+<ParamField path="Email" type="object" required>
+  Configuration for sending emails.
+  
+  ```typescript
+  Email: {
+    Host: "smtp.example.com",
+    Port: 587,
+    Username: "username",
+  }
+  ```
+  
+  <Note>
+  The email password should be configured in your environment variables as `EMAIL_PASSWORD`. See [Environment Variables](/configuration/environment) for details.
+  </Note>
+  
+  <Expandable title="Email properties">
+    <ParamField path="Email.Host" type="string" required>
+      The SMTP server host to use for sending emails.
+    </ParamField>
+    
+    <ParamField path="Email.Port" type="number" required>
+      The SMTP server port to use for sending emails.
+    </ParamField>
+    
+    <ParamField path="Email.Username" type="string" required>
+      The username to use for authentication with the SMTP server. The corresponding password should be configured in your environment variables.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Gameservers
+
+<ParamField path="Gameservers" type="object" required>
+  Configuration for gameserver hosting.
+  
+  ```typescript
+  Gameservers: {
+    Hosting: "Both",
+  }
+  ```
+  
+  <Expandable title="Gameserver properties">
+    <ParamField path="Gameservers.Hosting" type="'Selfhosted' | 'Dedicated' | 'Both'" required>
+      The type of gameserver hosting to use.
+      
+      - `Selfhosted`: Only allow self-hosted game servers
+      - `Dedicated`: Only allow dedicated game servers
+      - `Both`: Allow both self-hosted and dedicated game servers
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Example Configuration
+
+```typescript
+export default {
+  Name: "Mercury",
+  Domain: "mercs.dev",
+  DatabaseURL: "http://localhost:8000",
+  RCCServiceProxyURL: "http://localhost:64990",
+  OrbiterPrivateURL: "http://localhost:64991",
+  OrbiterPublicDomain: "localhost:64992",
+  LauncherURI: "mercury-launcher:",
+  CurrencySymbol: "屌",
+  Pages: ["Statistics", "Forum", "Groups"],
+
+  DefaultBodyColors: {
+    Head: 24,
+    LeftArm: 24,
+    LeftLeg: 119,
+    RightArm: 24,
+    RightLeg: 119,
+    Torso: 23,
+  },
+
+  Logging: {
+    Requests: true,
+    FormattedErrors: false,
+    Time: true,
+  },
+
+  Branding: {
+    Favicon: "Branding/Favicon.svg",
+    Icon: "Branding/Icon.svg",
+    Tagline: "Revival tagline",
+    Descriptions: {
+      "Endless possibilites":
+        "Create or play your favourite games and customise your character with items on our catalog.",
+      "New features":
+        "In addition to full client usability, additional features such as security fixes, QoL fixes and an easy to use website make your experience better.",
+      "Same nostalgia":
+        "All of our clients will remain as vanilla as possible, to make sure it's exactly as you remember it.",
+    },
+  },
+
+  Images: {
+    DefaultPlaceIcons: ["Images/DefaultIcon1.avif"],
+    DefaultPlaceThumbnails: [
+      "Images/DefaultThumbnail1.avif",
+      "Images/DefaultThumbnail2.avif",
+      "Images/DefaultThumbnail3.avif",
+    ],
+  },
+
+  Themes: [
+    {
+      Name: "Standard",
+      Path: "Themes/Standard.css",
+    },
+  ],
+
+  Filtering: {
+    FilteredWords: [],
+    ReplaceWith: "#",
+    ReplaceType: "Character",
+  },
+
+  Registration: {
+    Keys: {
+      Enabled: true,
+      Prefix: "mercurkey-",
+    },
+    Emails: true,
+  },
+
+  Email: {
+    Host: "smtp.example.com",
+    Port: 587,
+    Username: "username",
+  },
+
+  Gameservers: {
+    Hosting: "Both",
+  },
+} satisfies import("./Assets/schema.ts").Config
+```

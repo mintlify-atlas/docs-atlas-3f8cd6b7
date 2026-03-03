@@ -1,0 +1,97 @@
+---
+title: Installation Overview
+description: System requirements and installation options for Mercury Core
+---
+
+Mercury Core is a self-hostable MMO game creation platform that provides a secure, flexible foundation for building revival web platforms. Whether you're setting up a development environment or deploying to production, this guide will help you get started.
+
+## System Requirements
+
+### Development Environment
+
+To develop with Mercury Core, you'll need:
+
+- **Bun** - Latest version (expected as `bun`)
+- **Docker** - Latest version (optional, expected as `docker`)
+  - Alternative container managers like Podman are supported
+- **Terminal** - Command line access
+- **Modern web browser** - Early 2024 onwards for most major browsers
+- **Code editor** - Visual Studio Code recommended
+
+<Note>
+The [Mercury Core development extension pack](https://marketplace.visualstudio.com/items?itemName=MercuryCore.mercurycoredevelopment) is recommended for VS Code users, as it includes all necessary extensions plus quality-of-life improvements.
+</Note>
+
+### Production Environment
+
+For hosting Mercury Core in production, you'll need:
+
+- **Bun** - Latest version (expected as `bun`)
+- **Docker** - Latest version or another container manager (expected as `docker`)
+- **Caddy** - Latest version for reverse proxy (expected as `caddy`)
+- **Terminal** - Command line access
+- **Server hardware** - Physical or virtual server
+
+## Installation Options
+
+Mercury Core can be set up in two primary ways:
+
+### Development Setup
+
+Ideal for local development, testing, and customization. This setup includes:
+
+- Hot-reload development server
+- Database and economy services via Docker
+- Inspector tools for debugging
+- Fast iteration with Vite
+
+[Learn more →](/installation/development)
+
+### Production Setup
+
+Optimized for hosting and serving your platform to users. This setup includes:
+
+- Production-optimized builds
+- Caddy reverse proxy with automatic HTTPS
+- Container orchestration
+- Background process management options
+
+[Learn more →](/installation/production)
+
+## Technology Stack
+
+Mercury Core is built with modern, performant technologies:
+
+- **Frontend**: Svelte & SvelteKit for reactive UI and full-stack capabilities
+- **Language**: TypeScript throughout for type safety and intellisense
+- **Database**: SurrealDB for multi-model, relational data storage
+- **Build Tool**: Vite for fast development and zero-downtime deployments
+- **Reverse Proxy**: Caddy for automatic HTTPS and URL rewriting
+- **Runtime**: Bun for fast JavaScript/TypeScript execution
+
+## Data Directory Structure
+
+Mercury Core stores runtime data in a `data/` directory that should be kept private:
+
+- `data/assets` - Binary files for assets (images, meshes, etc.)
+- `data/economy` - Transaction ledger and economy data
+- `data/icons` - Place icons
+- `data/surreal` - Database files
+- `data/thumbnails` - Asset thumbnails
+
+<Warning>
+The data directory is hidden from source control and should be kept private. Consider mounting to an external volume for easier backups and additional storage space.
+</Warning>
+
+## Next Steps
+
+Choose your installation path:
+
+<CardGroup cols={2}>
+  <Card title="Development Setup" icon="code" href="/installation/development">
+    Set up a local development environment
+  </Card>
+  <Card title="Production Setup" icon="server" href="/installation/production">
+    Deploy Mercury Core to production
+  </Card>
+</CardGroup>

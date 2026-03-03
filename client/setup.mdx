@@ -1,0 +1,166 @@
+---
+title: Client Setup
+description: Setting up Roblox clients to work with Mercury Core
+---
+
+This guide covers the steps needed to configure your Roblox client to connect to Mercury Core.
+
+## Prerequisites
+
+- A Roblox client with the public key patched to match your private key
+- Custom corescripts and loadscripts (or modified originals)
+- Private key generated and stored securely
+
+## Directory Structure
+
+Create the following directory structure in your Mercury Core installation:
+
+```
+data/
+├── server/
+│   ├── assets/
+│   │   └── {asset_id}           # Privileged assets (corescripts, etc.)
+│   └── loadscripts/
+│       ├── visit.lua
+│       ├── join.lua
+│       ├── studio.lua
+│       └── host.lua
+├── assets/
+│   └── {asset_id}               # User-uploaded assets
+├── assetcache/
+│   └── {asset_id}               # Cached Open Cloud assets
+└── PrivateKey.pem               # Your private signing key
+```
+
+## Generating Keys
+
+Generate an RSA key pair for script signing:
+
+```bash
+# Generate private key
+openssl genrsa -out data/PrivateKey.pem 2048
+
+# Extract public key
+openssl rsa -in data/PrivateKey.pem -pubout -out PublicKey.pem
+```
+
+<Warning>
+  Keep your `PrivateKey.pem` secure and never commit it to version control. The `data/` directory is already excluded in `.gitignore`.
+</Warning>
+
+## Patching the Client
+
+You need to patch your Roblox client with the public key:
+
+1. Extract the public key from `PublicKey.pem`
+2. Patch it into your client's executable (location varies by client version)
+3. Test the signature verification works by connecting to your server
+
+Refer to your client's specific documentation for patching instructions.
+
+## Creating Loadscripts
+
+Loadscripts are Lua scripts that initialize different game modes. Create these files in `data/server/loadscripts/`:
+
+### visit.lua
+
+Used when visiting places:
+
+```lua
+-- The script will have _PLACE_ID replaced with "0"
+local placeId = _PLACE_ID
+-- Add your visit initialization code
+```
+
+### join.lua
+
+Used when joining multiplayer games. This script receives several template replacements:
+
+- `_PLACE_ID` - The place being joined
+- `_SERVER_ADDRESS` - Game server address
+- `_SERVER_PORT` - Game server port
+- `_USER_ID` - Random user ID
+- `_USERNAME` - Player's username
+- `_MEMBERSHIP_TYPE` - Membership level
+- `_CHAR_APPEARANCE` - Character appearance URL
+- `_PING_URL` - Client presence endpoint
+
+### studio.lua
+
+Used for Studio mode:
+
+```lua
+-- Studio initialization code
+```
+
+### host.lua
+
+Used when hosting game servers. Receives replacements:
+
+- `_BASE_URL` - Your domain
+- `_MAP_LOCATION` - Optional map location
+- `_SERVER_PORT` - Server port
+- `_SERVER_PRESENCE_URL` - Server presence endpoint
+
+## Privileged Assets
+
+Place corescripts and other privileged assets in `data/server/assets/` with their asset IDs as filenames.
+
+For example:
+- `data/server/assets/1` - Core GUI script
+- `data/server/assets/2` - Chat script
+- `data/server/assets/3` - Player scripts
+
+<Warning>
+  The folder structure and asset IDs must match what your client expects. Refer to [tp-link-extender/2013](https://github.com/tp-link-extender/2013) for the expected structure.
+</Warning>
+
+## Configuring the Client
+
+Point your client to your Mercury Core domain. This typically involves:
+
+1. Modifying the client's configuration or registry entries
+2. Setting the base URL to your domain (e.g., `mercs.dev`)
+3. Ensuring the client uses HTTP for local development or HTTPS for production
+
+## Testing the Connection
+
+1. Start Mercury Core with `bun ./build` (after running `bun prod`)
+2. Launch your client
+3. Check the server logs for asset requests:
+   - `Requested asset {id}`
+   - `Serving privileged {id}` or `Serving user {id}`
+4. Verify scripts are being signed correctly
+
+## Client Settings
+
+Mercury Core serves client settings through:
+
+- `/api/clientsharedsettings` - Shared settings
+- `/api/clientappsettings` - Application settings
+
+These are rewritten from legacy URLs:
+- `/Setting/QuietGet/ClientSharedSettings/*`
+- `/Setting/QuietGet/ClientAppSettings/*`
+
+The application settings are served from `Site/src/routes/(rbxclient)/(render)/v1/settings/application/settings.json`.
+
+## Common Issues
+
+### Scripts not loading
+
+- Verify the private key exists at `data/PrivateKey.pem`
+- Check that loadscripts exist in `data/server/loadscripts/`
+- Ensure the client has the matching public key patched
+
+### Assets not found
+
+- Check the asset ID is correct
+- Verify privileged assets are in `data/server/assets/{id}`
+- Ensure user assets have proper visibility in the database
+
+### Signature verification failed
+
+- Confirm the public key in the client matches `PrivateKey.pem`
+- Verify the signing function is working correctly
+- Check client logs for signature errors

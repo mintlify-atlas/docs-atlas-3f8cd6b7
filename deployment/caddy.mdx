@@ -1,0 +1,460 @@
+---
+title: Caddy Reverse Proxy
+description: Configure Caddy as a reverse proxy for Mercury Core with automatic HTTPS
+---
+
+Caddy is the recommended reverse proxy for Mercury Core, providing automatic HTTPS certificate management and URL rewriting for legacy compatibility.
+
+## Why Caddy?
+
+- Automatic HTTPS with Let's Encrypt
+- Zero-configuration TLS certificate renewal
+- Simple configuration syntax
+- Built-in URL rewriting for legacy endpoint compatibility
+- Efficient reverse proxy with HTTP/2 and HTTP/3 support
+
+## Installation
+
+### Ubuntu/Debian
+
+```bash
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update
+sudo apt install caddy
+```
+
+### Docker
+
+You can also run Caddy as a Docker container alongside Mercury Core:
+
+```bash
+docker run -d \
+  --name caddy \
+  --network host \
+  -v ./Caddyfile:/etc/caddy/Caddyfile \
+  -v caddy_data:/data \
+  -v caddy_config:/config \
+  caddy:latest
+```
+
+## Mercury Core Caddyfile
+
+Mercury Core includes a production-ready Caddyfile at `Site/Caddyfile`:
+
+```caddy
+mercs.dev {
+    rewrite /Asset /asset
+    rewrite /Asset/ /asset
+    rewrite /Asset/Default.ashx /asset
+
+    rewrite /Game/Studio.ashx /game/studio
+    rewrite /Game/Visit.ashx /game/visit
+    rewrite /Game/Join.ashx /game/join
+    rewrite /game/gameserver.ashx /game/gameserver
+    rewrite /Game/MachineConfiguration.ashx /game/machineconfiguration
+    rewrite /Game/ClientPresence /game/clientpresence
+    rewrite /Game/ServerPresence /game/serverpresence
+    rewrite /Game/Host /game/host
+    rewrite /Asset/GetScriptState.ashx /asset/getscriptstate
+    rewrite /Game/Tools/InsertAsset.ashx /game/tools/insertasset
+    rewrite /Game/Tools/ThumbnailAsset.ashx /game/tools/thumbnailasset
+    rewrite /UploadMedia/PostImage.aspx /studio/uploadmedia/screenshot
+
+    rewrite /Setting/QuietGet/ClientSharedSettings/* /api/clientsharedsettings
+    rewrite /Setting/QuietGet/ClientAppSettings/* /api/clientappsettings
+
+    reverse_proxy localhost:4443
+}
+
+# Often required for some URLs
+www.mercs.dev {
+    reverse_proxy localhost:4443
+}
+```
+
+## Configuration Explanation
+
+### URL Rewrites
+
+The Caddyfile contains URL rewrites for legacy endpoint compatibility. These rewrites transform old-style URLs (typically `.ashx` and `.aspx` extensions) to modern REST-style endpoints:
+
+| Legacy URL | Modern URL | Purpose |
+|------------|------------|----------|
+| `/Asset/Default.ashx` | `/asset` | Asset delivery |
+| `/Game/Studio.ashx` | `/game/studio` | Studio launcher |
+| `/Game/Visit.ashx` | `/game/visit` | Game visit handler |
+| `/Game/Join.ashx` | `/game/join` | Game join handler |
+| `/UploadMedia/PostImage.aspx` | `/studio/uploadmedia/screenshot` | Screenshot upload |
+
+<Warning>
+Do not remove these URL rewrites. Legacy game clients rely on these endpoints for proper functionality.
+</Warning>
+
+### Domain Configuration
+
+The configuration includes two domain blocks:
+
+1. **Primary domain** (`mercs.dev`) - Main site with all rewrites
+2. **WWW subdomain** (`www.mercs.dev`) - Redirects to primary domain
+
+Both domains reverse proxy to `localhost:4443` where the Mercury Core site container is listening.
+
+### Automatic HTTPS
+
+Caddy automatically:
+- Obtains TLS certificates from Let's Encrypt on first request
+- Renews certificates before expiration
+- Redirects HTTP to HTTPS
+- Uses modern TLS 1.2+ protocols
+
+## Customizing for Your Domain
+
+To adapt the Caddyfile for your domain:
+
+1. Copy the example Caddyfile:
+
+```bash
+cp Site/Caddyfile /etc/caddy/Caddyfile
+```
+
+2. Replace `mercs.dev` with your domain:
+
+```caddy
+yourdomain.com {
+    # ... rewrite rules ...
+    reverse_proxy localhost:4443
+}
+
+www.yourdomain.com {
+    reverse_proxy localhost:4443
+}
+```
+
+3. Ensure your domain's DNS points to your server:
+
+```bash
+# A record for yourdomain.com
+# A record for www.yourdomain.com
+```
+
+4. Reload Caddy:
+
+```bash
+sudo systemctl reload caddy
+```
+
+## Advanced Configuration
+
+### Custom Port Binding
+
+If Mercury Core runs on a different port:
+
+```caddy
+yourdomain.com {
+    # ... rewrites ...
+    reverse_proxy localhost:8080
+}
+```
+
+### Adding Response Headers
+
+```caddy
+yourdomain.com {
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+    
+    # ... rewrites and reverse_proxy ...
+}
+```
+
+### Request Size Limits
+
+For large file uploads (matches `BODY_SIZE_LIMIT` in `.env`):
+
+```caddy
+yourdomain.com {
+    request_body {
+        max_size 1GB
+    }
+    
+    # ... rewrites and reverse_proxy ...
+}
+```
+
+### Access Logging
+
+```caddy
+yourdomain.com {
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+    
+    # ... rewrites and reverse_proxy ...
+}
+```
+
+### Rate Limiting
+
+Protect against abuse with rate limiting:
+
+```caddy
+yourdomain.com {
+    rate_limit {
+        zone dynamic {
+            key {remote_host}
+            events 100
+            window 1m
+        }
+    }
+    
+    # ... rewrites and reverse_proxy ...
+}
+```
+
+## SSL/TLS Configuration
+
+### Custom Certificates
+
+If you have your own certificates:
+
+```caddy
+yourdomain.com {
+    tls /path/to/cert.pem /path/to/key.pem
+    
+    # ... rewrites and reverse_proxy ...
+}
+```
+
+### Development Mode (Self-Signed)
+
+For local development:
+
+```caddy
+localhost:443 {
+    tls internal
+    
+    # ... rewrites and reverse_proxy ...
+}
+```
+
+### Custom ACME Server
+
+For alternative certificate authorities:
+
+```caddy
+{
+    acme_ca https://acme.zerossl.com/v2/DV90
+}
+
+yourdomain.com {
+    # ... rewrites and reverse_proxy ...
+}
+```
+
+## Managing Caddy Service
+
+### Start/Stop/Restart
+
+```bash
+# Start Caddy
+sudo systemctl start caddy
+
+# Stop Caddy
+sudo systemctl stop caddy
+
+# Restart Caddy
+sudo systemctl restart caddy
+
+# Reload configuration without downtime
+sudo systemctl reload caddy
+```
+
+### Check Status
+
+```bash
+# Service status
+sudo systemctl status caddy
+
+# View logs
+sudo journalctl -u caddy -f
+
+# Validate configuration
+caddy validate --config /etc/caddy/Caddyfile
+```
+
+### Enable Auto-Start
+
+```bash
+sudo systemctl enable caddy
+```
+
+## Troubleshooting
+
+### Certificate Acquisition Fails
+
+Ensure ports 80 and 443 are accessible:
+
+```bash
+# Check if ports are open
+sudo netstat -tlnp | grep -E ':(80|443)'
+
+# Test from external server
+curl -I http://yourdomain.com
+```
+
+Check DNS configuration:
+
+```bash
+nslookup yourdomain.com
+dig yourdomain.com
+```
+
+### Configuration Syntax Errors
+
+Validate before reloading:
+
+```bash
+caddy validate --config /etc/caddy/Caddyfile
+```
+
+### Connection Refused to Backend
+
+Verify Mercury Core is running on the expected port:
+
+```bash
+# Check if site container is running
+docker compose ps site
+
+# Verify port is listening
+ss -tlnp | grep 4443
+
+# Test direct connection
+curl -k https://localhost:4443
+```
+
+### Certificate Renewal Issues
+
+Check Caddy logs for renewal errors:
+
+```bash
+sudo journalctl -u caddy --since "1 week ago" | grep -i renew
+```
+
+Manually trigger renewal:
+
+```bash
+caddy renew --config /etc/caddy/Caddyfile
+```
+
+## Production Best Practices
+
+### Firewall Configuration
+
+Only expose necessary ports:
+
+```bash
+# Allow HTTP and HTTPS
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# Block direct access to backend
+sudo ufw deny 4443/tcp
+```
+
+### Monitoring
+
+Enable Caddy metrics endpoint:
+
+```caddy
+{
+    servers {
+        metrics
+    }
+}
+```
+
+Access metrics at `http://localhost:2019/metrics`.
+
+### Log Rotation
+
+Configure log rotation to prevent disk space issues:
+
+```bash
+sudo nano /etc/logrotate.d/caddy
+```
+
+```
+/var/log/caddy/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    missingok
+    postrotate
+        systemctl reload caddy
+    endscript
+}
+```
+
+### Health Checks
+
+Add a health check endpoint:
+
+```caddy
+yourdomain.com {
+    handle /health {
+        respond "OK" 200
+    }
+    
+    # ... rewrites and reverse_proxy ...
+}
+```
+
+<Warning>
+Always test configuration changes with `caddy validate` before reloading in production to avoid service disruption.
+</Warning>
+
+## Docker Compose Integration
+
+To run Caddy alongside Mercury Core, add to `compose.yml`:
+
+```yaml
+services:
+  # ... existing services ...
+  
+  caddy:
+    image: caddy:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Site/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    depends_on:
+      - site
+
+volumes:
+  caddy_data:
+  caddy_config:
+```
+
+Then start all services:
+
+```bash
+docker compose up -d
+```
+
+## Next Steps
+
+- Review [Security Considerations](/deployment/security) for hardening Caddy
+- Configure [Database Deployment](/deployment/database) for data persistence
+- Set up monitoring and alerting for certificate expiration

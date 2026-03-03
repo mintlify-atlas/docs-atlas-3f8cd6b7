@@ -1,0 +1,292 @@
+---
+title: Game Hosting
+description: Self-hosted and dedicated game server management in Mercury Core
+---
+
+Mercury Core supports flexible game hosting with both self-hosted and dedicated server options, allowing players to host games from their own computers or use centralized dedicated servers.
+
+## Hosting Modes
+
+Configure your preferred hosting mode in `Assets/schema.ts`:
+
+```typescript
+Gameservers: {
+  Hosting: "Selfhosted" | "Dedicated" | "Both"
+}
+```
+
+<CardGroup cols={3}>
+  <Card title="Self-Hosted" icon="computer">
+    Players run game servers on their own machines. Ideal for small communities and testing.
+  </Card>
+  
+  <Card title="Dedicated" icon="server">
+    Central servers managed by Orbiter. Best for production deployments and larger player counts.
+  </Card>
+  
+  <Card title="Both" icon="circle-nodes">
+    Support both modes simultaneously. Players can choose their preferred hosting method.
+  </Card>
+</CardGroup>
+
+## Places (Games)
+
+Places are the core game units in Mercury Core. Each place represents a playable game world.
+
+### Creating a Place
+
+Places are created through the Games section:
+
+1. Navigate to `/games/create`
+2. Upload a place file (game world data)
+3. Configure place settings
+4. Place is automatically assigned a unique ID
+
+### Place Configuration
+
+Place owners can configure their games through the settings page (`/place/{id}/{name}/settings`).
+
+<Tabs>
+  <Tab title="View Settings">
+    ### Visual Presentation
+    
+    Configure how your place appears to players:
+    
+    **Name:**
+    - 3-100 characters
+    - Filtered for profanity
+    - Used in URLs and listings
+    
+    **Description:**
+    - Up to 1000 characters
+    - Supports formatted text
+    - Filtered for profanity
+    - Shows last updated timestamp
+    
+    **Icon:**
+    - Custom place icon upload
+    - Maximum 1MB file size
+    - Automatically resized to 270x270
+    - Converted to AVIF format for optimal delivery
+    - Stored in `data/icons/{placeId}.avif`
+    
+    **Thumbnails:**
+    - Default thumbnails are assigned based on place ID
+    - Configured in `Images.DefaultPlaceThumbnails`
+    
+    **Source:** `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts:103-134`
+  </Tab>
+  
+  <Tab title="Network Settings">
+    ### Server Configuration
+    
+    **Dedicated Server Mode:**
+    - Toggle between dedicated and self-hosted
+    - Only available when hosting mode permits
+    
+    **Self-Hosted Configuration:**
+    - **Server Address:** IP or domain for self-hosted servers
+    - **Server Port:** Port number for connections
+    - Players connect directly to this address
+    
+    **Max Players:**
+    - Maximum concurrent players allowed
+    - Enforced by game server
+    - Configurable per place
+    
+    **Source:** `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts:144-151`
+  </Tab>
+  
+  <Tab title="Privacy Settings">
+    ### Access Control
+    
+    **Private Server:**
+    - When enabled, place is hidden from public listings
+    - Requires private ticket URL parameter to access
+    - Useful for testing or invite-only games
+    
+    **Private Link:**
+    - Unique ticket that grants access to private servers
+    - Format: `/place/{id}/{name}?privateServer={ticket}`
+    - Can be regenerated to revoke existing links
+    - Checked on every join attempt
+    
+    **Source:** `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts:152-170`
+  </Tab>
+  
+  <Tab title="Server Ticket">
+    ### Security Token
+    
+    The server ticket is a secure token used for game server authentication:
+    
+    - Unique per place
+    - Used by game servers to authenticate with the platform
+    - Can be regenerated if compromised
+    - Only visible to place owner and super administrators (level 5)
+    - Required for self-hosted servers to connect
+    
+    **Regeneration:**
+    - Click "Regenerate Server Ticket" to create a new ticket
+    - Old ticket is immediately invalidated
+    - Update your game server configuration with the new ticket
+    
+    **Source:** `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts:135-143`
+  </Tab>
+  
+  <Tab title="Place Data">
+    ### Game File Management
+    
+    Upload and update the place file (game world):
+    
+    - Maximum file size: 100MB
+    - Stored in `data/places/{placeId}`
+    - File must exist for dedicated servers to start
+    - Updates take effect on next server start
+    
+    **Updating Place Data:**
+    1. Upload new place file through settings
+    2. File is validated and stored
+    3. If dedicated server is running, restart it to load changes
+    
+    **Source:** `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts:171-188`
+  </Tab>
+</Tabs>
+
+## Joining Games
+
+Players can join games through the place page (`/place/{id}/{name}`).
+
+### Join Process
+
+<Steps>
+  <Step title="Navigate to Place">
+    Click on a game from the Games listing page
+  </Step>
+  
+  <Step title="Join Server">
+    Click the "Join" button to get a play ticket
+  </Step>
+  
+  <Step title="Launch Client">
+    The platform opens the game client using a custom launcher URI scheme
+  </Step>
+  
+  <Step title="Connect">
+    Client connects to the game server using the provided ticket
+  </Step>
+</Steps>
+
+### Join Ticket System
+
+When a player joins:
+
+1. All existing playing sessions for the user are invalidated
+2. A new unique join ticket is generated
+3. The ticket is passed to the game client via the launcher URI
+4. Orbiter validates the ticket when the client connects
+5. Player status is updated to "Playing"
+
+**Security:**
+- Tickets are single-use and time-limited
+- Moderated users cannot join games
+- Private server access is verified
+
+**Source:** `Site/src/routes/(main)/place/[id=asset]/[name]/+page.server.ts:116-127`
+
+## Dedicated Server Management
+
+When using dedicated hosting mode, servers are managed through Orbiter.
+
+### Starting a Server
+
+Players can start dedicated servers for places:
+
+1. Click "Start Server" on the place page
+2. System verifies place file exists
+3. Request is sent to Orbiter to spawn server
+4. Server starts and listens for connections
+
+**Requirements:**
+- Place file must exist in `data/places/{placeId}`
+- Rate limited to 20 requests per time window
+- User must have access to the place
+
+**Source:** `Site/src/routes/(main)/place/[id=asset]/[name]/+page.server.ts:129-153`
+
+### Closing a Server
+
+Servers can be closed by:
+
+- **Place Owner:** Full control over their servers
+- **Administrators:** Permission level 4+ can close any server
+
+**Process:**
+1. Submit close request
+2. Orbiter gracefully shuts down the server
+3. Players are disconnected
+4. Resources are freed
+
+**Source:** `Site/src/routes/(main)/place/[id=asset]/[name]/+page.server.ts:155-169`
+
+### Server Status
+
+Place pages display real-time server information:
+
+- **Server Ping:** Latency to the game server
+- **Active Players:** List of currently connected players with usernames
+- **Max Players:** Configured player limit
+- **Server Status:** Online/Offline indicator
+
+## Orbiter Integration
+
+Orbiter is Mercury Core's game server orchestrator.
+
+### Configuration
+
+Configure Orbiter in `Assets/schema.ts`:
+
+```typescript
+OrbiterPrivateURL: "http://localhost:8080",  // Private API for Site
+OrbiterPublicDomain: "orbiter.example.com",  // Public domain for browsers
+```
+
+### API Functions
+
+- **List Gameservers:** Get all running servers (admin only)
+- **Start Gameserver:** Spawn a new dedicated server
+- **Close Gameserver:** Gracefully shut down a server
+- **Get Server Status:** Query server state and player list
+
+**Source:** `Site/src/lib/server/orbiter.ts`
+
+## Launcher URI
+
+Mercury Core uses a custom URI scheme to launch the game client:
+
+```typescript
+LauncherURI: "mercurycore://"  // Configure in schema.ts
+```
+
+The launcher URI is called with:
+```
+{LauncherURI}join?ticket={ticket}&server={serverAddress}
+```
+
+The client application handles this URI scheme to:
+1. Parse connection parameters
+2. Authenticate with the ticket
+3. Connect to the game server
+4. Load the place data
+
+## Admin Tools
+
+Administrators with permission level 5 can access gameserver management at `/admin/gameservers`.
+
+### Gameserver Dashboard
+
+- View all active dedicated servers
+- See player counts and connection info
+- Monitor server health and performance
+- Force close servers if needed
+
+**Source:** `Site/src/routes/(main)/admin/gameservers/+page.server.ts:5-14`

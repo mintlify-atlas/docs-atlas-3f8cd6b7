@@ -1,0 +1,162 @@
+---
+title: 'Client Settings API'
+description: 'Client configuration and settings endpoints'
+icon: 'gear'
+---
+
+## Get Client App Settings
+
+`GET /api/clientappsettings`
+
+Returns client application settings as JSON. These settings configure client behavior and features.
+
+### Response
+
+Returns the JSON configuration from `settings.json`.
+
+<ResponseField name="Content-Type" type="string">
+  Set to `application/json`
+</ResponseField>
+
+### Settings Structure
+
+The response contains client configuration values that control:
+- Feature flags
+- Client behavior settings
+- Application-specific configurations
+
+<Note>
+  The exact settings structure is defined in `api/settings.json` and may vary based on your Mercury Core configuration
+</Note>
+
+### Example Request
+
+```bash
+curl "http://mercury.local/api/clientappsettings"
+```
+
+### Example Response
+
+```json
+{
+  "feature1": true,
+  "setting1": "value",
+  "config": {
+    "option": 123
+  }
+}
+```
+
+### Implementation
+
+Source: `api/clientappsettings/+server.ts:4`
+
+---
+
+## Get Client Shared Settings
+
+`GET /api/clientsharedsettings`
+
+Returns shared client settings as JSON. These settings are shared across different client instances and sessions.
+
+### Response
+
+Returns the JSON configuration from `settings.json` (same source as app settings).
+
+<ResponseField name="Content-Type" type="string">
+  Set to `application/json`
+</ResponseField>
+
+### Settings Structure
+
+The response contains shared configuration values that may include:
+- Cross-session settings
+- Shared feature flags
+- Global client configurations
+
+<Note>
+  This endpoint currently returns the same settings as `/api/clientappsettings`. The distinction may be used for different setting scopes in the future.
+</Note>
+
+### Example Request
+
+```bash
+curl "http://mercury.local/api/clientsharedsettings"
+```
+
+### Example Response
+
+```json
+{
+  "sharedFeature": true,
+  "globalSetting": "value"
+}
+```
+
+### Implementation
+
+Source: `api/clientsharedsettings/+server.ts:4`
+
+---
+
+## Get Application Settings (v1)
+
+`GET /(rbxclient)/(render)/v1/settings/application`
+
+Returns application settings for the render client. This is a versioned endpoint used by rendering services.
+
+### Response
+
+Returns the JSON configuration from the render settings file.
+
+<ResponseField name="Content-Type" type="string">
+  Set to `application/json`
+</ResponseField>
+
+### Settings Purpose
+
+These settings configure:
+- Render client behavior
+- Rendering pipeline options
+- Application-level render settings
+
+### Example Request
+
+```bash
+curl "http://mercury.local/(rbxclient)/(render)/v1/settings/application"
+```
+
+### Implementation
+
+Source: `(rbxclient)/(render)/v1/settings/application/+server.ts:4`
+
+---
+
+## Settings File Location
+
+All client settings endpoints read from JSON configuration files:
+
+- **App Settings**: `api/settings.json`
+- **Shared Settings**: `api/settings.json`
+- **Render Settings**: `(rbxclient)/(render)/v1/settings/settings.json`
+
+<Warning>
+  Modifying settings files requires server restart to take effect
+</Warning>
+
+## Configuration Best Practices
+
+<Accordion title="Settings Management">
+  1. **Version Control**: Keep settings files in version control
+  2. **Environment-Specific**: Use different settings for dev/staging/production
+  3. **Documentation**: Document each setting's purpose and valid values
+  4. **Validation**: Validate settings on application startup
+  5. **Defaults**: Provide sensible defaults for all settings
+</Accordion>
+
+<Accordion title="Security Considerations">
+  - Never include sensitive data (API keys, passwords) in settings files
+  - Use environment variables for sensitive configuration
+  - Restrict file permissions on settings files
+  - Audit changes to settings files
+</Accordion>

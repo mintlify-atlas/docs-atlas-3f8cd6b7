@@ -1,0 +1,467 @@
+---
+title: Services
+description: Detailed documentation of Mercury Core's three main services
+---
+
+Mercury Core consists of three independent services that communicate over HTTP and WebSocket connections. Each service has a specific responsibility and can be developed, tested, and scaled independently.
+
+## Site Service
+
+The Site service is the primary web application that users interact with. It's built with SvelteKit and TypeScript.
+
+### Technology Stack
+
+- **Framework**: SvelteKit (full-stack meta-framework)
+- **UI Library**: Svelte 5 (compiled reactive components)
+- **Language**: TypeScript (strict type checking enabled)
+- **Runtime**: Bun (fast JavaScript runtime)
+- **Build Tool**: Vite (dev server and bundler)
+
+### Responsibilities
+
+#### User Management
+- Registration with invite keys
+- Authentication and session management
+- Profile customization (description, avatar, body colors)
+- Friend requests and relationships
+- User moderation and bans
+
+#### Content Management
+- Asset catalog and inventory
+- Game/place creation and hosting
+- Forum posts and comments
+- Groups and group membership
+- Asset thumbnails and renders
+
+#### Administrative Functions
+- User moderation tools
+- Registration key management
+- Asset approval queue
+- Transaction monitoring
+- Audit logging
+- Banner management
+
+### Route Structure
+
+SvelteKit uses file-based routing in `Site/src/routes/`:
+
+```
+routes/
+├── (plain)/              # Unauthenticated layout
+│   ├── +page.svelte     # Landing page
+│   ├── login/           # Login page
+│   └── register/        # Registration
+├── (main)/              # Authenticated layout
+│   ├── home/            # User dashboard
+│   ├── catalog/         # Asset browsing
+│   ├── games/           # Game browsing
+│   ├── character/       # Avatar customization
+│   ├── inventory/       # User's assets
+│   ├── groups/          # Groups system
+│   ├── forum/           # Community forums
+│   └── admin/           # Admin panel
+└── (legal)/             # Legal/info pages
+    ├── statistics/
+    ├── moderation/
+    └── report/
+```
+
+Layout groups `(plain)`, `(main)`, and `(legal)` share common layouts without affecting URLs.
+
+### Server-Side Code
+
+Server utilities are in `Site/src/lib/server/`:
+
+- **surreal.ts**: Database connection and helpers
+- **economy.ts**: Economy service client
+- **auth.ts**: Authentication utilities
+- **validate.ts**: Input validation
+- **sign.ts**: Asset signing for corescripts
+- **email.ts**: Email sending
+- ***.surql**: SurrealQL query files
+
+### API Routes
+
+SvelteKit provides automatic API routes through `+server.ts` files:
+
+```typescript
+// Example: POST endpoint
+export const POST = async ({ request, locals }) => {
+  const user = locals.user; // From session
+  const data = await request.json();
+  
+  // Process request
+  return json({ success: true });
+};
+```
+
+### Environment Variables
+
+Configured in `Site/.env`:
+
+```bash
+# SurrealDB connection
+SURREAL_URL=ws://localhost:8000
+SURREAL_USER=root
+SURREAL_PASS=root
+
+# Economy service
+ECONOMY_URL=http://localhost:2009
+
+# Site configuration
+PUBLIC_SITE_NAME="Mercury Core"
+PUBLIC_SITE_URL=https://example.com
+```
+
+### Development
+
+Start the dev server:
+
+```bash
+cd Site
+bun install
+bun dev
+```
+
+Vite provides:
+- Hot module replacement (instant updates)
+- Fast refresh for Svelte components
+- On-demand compilation
+- Built-in inspector (Ctrl+I to select elements)
+
+### Production Build
+
+```bash
+bun run build    # Build for production
+bun preview      # Preview production build locally
+bun ./build      # Start production server
+```
+
+The production build:
+- Pre-renders static pages
+- Optimizes and minifies code
+- Generates service worker
+- Outputs to `Site/build/`
+
+## Database Service
+
+SurrealDB serves as the primary database, running on port 8000.
+
+### Starting the Database
+
+**Development** (auto-started by Site service):
+```bash
+surreal start -u=root -p=root surrealkv://data/surreal
+```
+
+**Production** (via Docker Compose):
+```yaml
+services:
+  database:
+    build: ./Database
+    ports:
+      - 8000:8000
+    volumes:
+      - ./data/surreal:/database
+    command:
+      - start
+      - -u=root
+      - -p=root
+      - surrealkv://database
+```
+
+### Connection
+
+The Site service connects via WebSocket (Site/src/lib/server/surreal.ts:36-93):
+
+```typescript
+const db = new Surreal({
+  codecOptions: {
+    useNativeDates: true,
+  },
+});
+
+await db.connect("ws://localhost:8000", {
+  namespace: "main",
+  database: "main",
+  authentication: {
+    username: "root",
+    password: "root",
+  },
+});
+```
+
+### Schema Initialization
+
+On startup, the Site service runs `init.surql` to define the complete database schema. This includes:
+
+- Table definitions (user, asset, place, comment, etc.)
+- Field types and validation
+- Graph relationships (friends, follows, likes, etc.)
+- Computed fields (user status, comment scores)
+- Indexes (username uniqueness)
+- Database functions
+- Event triggers for audit logging
+
+See [Database](/concepts/database) for detailed schema documentation.
+
+### Query Retry Logic
+
+SurrealDB supports optimistic concurrency. The Site service automatically retries failed transactions:
+
+```typescript
+db.query = async (query, bindings) => {
+  try {
+    return await ogq(query, bindings);
+  } catch (err) {
+    if (err.message.endsWith("This transaction can be retried")) {
+      console.log("Retrying query:", err.message);
+      return await db.query(query, bindings);
+    }
+    throw err;
+  }
+};
+```
+
+### Type Safety
+
+The Site service defines TypeScript types for all database tables (Site/src/lib/server/surreal.ts:101-186):
+
+```typescript
+type RecordIdTypes = {
+  user: string
+  asset: number
+  place: number
+  comment: string
+  session: string
+  // ... etc
+}
+
+export const User = new Table("user");
+export const Asset = new Table("asset");
+
+export const Record = <T extends keyof RecordIdTypes>(
+  table: T,
+  id: RecordIdTypes[T]
+) => new SurrealRecordId(table, id);
+```
+
+This ensures compile-time safety when working with database records.
+
+## Economy Service
+
+A standalone Go service that manages the virtual economy, running on port 2009.
+
+### Architecture
+
+The Economy service is intentionally simple and focused:
+
+- Written in **Go** for performance and reliability
+- Append-only transaction ledger (JSONL format)
+- In-memory balance calculation
+- REST API for Site service
+- No database dependencies
+
+### Starting the Service
+
+**Development** (auto-started by Site service):
+```bash
+cd Economy
+go build
+./Economy
+```
+
+**Production** (via Docker Compose):
+```yaml
+services:
+  economy:
+    build: ./Economy
+    ports:
+      - 2009:2009
+    volumes:
+      - ./data/economy:/data/economy
+```
+
+### API Endpoints
+
+#### GET /currentStipend
+Returns the current daily stipend amount.
+
+**Response**: `10000000` (10.000000 units)
+
+#### GET /balance/:id
+Get a user's currency balance.
+
+**Response**: `50000000` (50.000000 units)
+
+#### GET /transactions/:id
+Get last 100 transactions for a user.
+
+**Response**:
+```json
+[
+  {
+    "Type": "Transaction",
+    "From": "user:alice",
+    "To": "user:bob",
+    "Amount": 5000000,
+    "Note": "Purchased Hat",
+    "Link": "/catalog/123456789/cool-hat",
+    "Time": 1709481234567,
+    "Id": "abc123xyz789"
+  }
+]
+```
+
+#### GET /transactions
+Get last 100 transactions across entire economy (admin only).
+
+#### POST /transact
+Execute a transaction between two users.
+
+**Request Body**:
+```json
+{
+  "From": "user:alice",
+  "To": "user:bob",
+  "Amount": 5000000,
+  "Note": "Purchased item",
+  "Link": "/catalog/123/item",
+  "Returns": {}
+}
+```
+
+#### POST /mint
+Create new currency (admin only).
+
+**Request Body**:
+```json
+{
+  "To": "user:alice",
+  "Amount": 10000000,
+  "Note": "Stipend"
+}
+```
+
+#### POST /burn
+Destroy currency (e.g., creation fees).
+
+**Request Body**:
+```json
+{
+  "From": "user:alice",
+  "Amount": 7500000,
+  "Note": "Created asset Cool Hat",
+  "Link": "/catalog/123456789/cool-hat",
+  "Returns": {}
+}
+```
+
+#### POST /stipend/:id
+Grant daily stipend to a user (12-hour cooldown).
+
+**Response**: 200 OK or 400 "Next stipend not available yet"
+
+### Client Integration
+
+The Site service includes a typed client (Site/src/lib/server/economy.ts):
+
+```typescript
+import { getBalance, transact } from '$lib/server/economy';
+
+// Get user balance
+const result = await getBalance(fetch, userId);
+if (result.ok) {
+  console.log('Balance:', result.value);
+}
+
+// Execute transaction
+const txResult = await transact(
+  fetch,
+  fromUser,
+  toUser,
+  amount,
+  "Purchase note",
+  "/link/to/item",
+  {} // Returns (asset transfers)
+);
+
+if (!txResult.ok) {
+  console.error('Transaction failed:', txResult.msg);
+}
+```
+
+### Pricing Functions
+
+The Site service defines standard pricing (Site/src/lib/server/economy.ts:126-132):
+
+```typescript
+export const fee = 0.1;
+const getFeeBasedPrice = (multiplier: number) =>
+  Math.round(fee * multiplier * 1e6);
+
+export const getAssetPrice = () => getFeeBasedPrice(75);  // 7.5 units
+export const getGroupPrice = () => getFeeBasedPrice(50);  // 5.0 units
+```
+
+These fees are burned (removed from circulation) when users create content.
+
+### Startup Logs
+
+```
+Loading ledger...
+User count     42
+Transactions   1337
+Economy size   420.000000 unit
+CCU           10.000000 unit
+~ Economy service is up on port 2009 ~
+```
+
+The service loads the entire ledger into memory and calculates current state on startup.
+
+## Service Dependencies
+
+```mermaid
+graph TD
+    Site[Site Service] --> DB[Database Service]
+    Site --> Econ[Economy Service]
+    
+    Site -.->|auto-starts in dev| DB
+    Site -.->|auto-starts in dev| Econ
+    
+    style Site fill:#ff6b6b
+    style DB fill:#95e1d3
+    style Econ fill:#4ecdc4
+```
+
+In development, the Site service manages child processes for dependencies. In production, Docker Compose handles orchestration with proper dependency ordering:
+
+```yaml
+site:
+  depends_on:
+    - database
+    - economy
+```
+
+## Health Monitoring
+
+All services include process monitoring:
+
+- **Database**: Site service monitors process and auto-restarts
+- **Economy**: Site service monitors process and auto-restarts  
+- **Site**: Systemd, PM2, or container orchestrator handles restarts
+
+Unexpected exits trigger:
+1. Error logging with last 10 lines of output
+2. Process exit with error code
+3. Orchestrator restart (in production)
+
+## Inter-Service Communication
+
+Services communicate over localhost using HTTP/WebSocket:
+
+- **Site ↔ Database**: WebSocket (port 8000) for real-time queries
+- **Site ↔ Economy**: HTTP REST API (port 2009) for transactions
+- **External ↔ Site**: HTTPS via Caddy (ports 80/443)
+
+No authentication between internal services (they trust localhost). In distributed deployments, add service mesh or mTLS.

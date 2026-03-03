@@ -1,0 +1,181 @@
+---
+title: 'Asset API'
+description: 'Asset delivery and character appearance endpoints for Roblox clients'
+icon: 'cube'
+---
+
+## Get Asset
+
+`GET /asset`
+
+Retrieves asset files including models, scripts, and other Roblox content. Assets are served from three sources with fallback: privileged server assets, user-uploaded assets, and cached Open Cloud assets.
+
+<ParamField query="id" type="number" required>
+  The numeric ID of the asset to retrieve
+</ParamField>
+
+### Response
+
+Returns the asset file as binary data with appropriate headers:
+
+<ResponseField name="Content-Type" type="string">
+  Always set to `binary/octet-stream`
+</ResponseField>
+
+<ResponseField name="Content-Disposition" type="string">
+  Attachment header with MD5 hash as filename
+</ResponseField>
+
+### Asset Resolution
+
+The endpoint attempts to load assets in this order:
+
+1. **Privileged assets** - Server-side assets from `../data/server/assets/{id}`
+2. **User assets** - User-uploaded assets from `../data/assets/{id}` (visibility checked, moderated assets blocked)
+3. **Open Cloud assets** - Fetched from Roblox Open Cloud API and cached locally
+
+<Note>
+  XML files have their URLs automatically substituted to point to the Mercury domain instead of roblox.com
+</Note>
+
+### Example Request
+
+```bash
+curl "http://mercury.local/asset?id=123456"
+```
+
+### Implementation
+
+Source: `(rbxclient)/asset/+server.ts:104`
+
+---
+
+## Get Body Colors
+
+`GET /asset/bodycolours/{username}`
+
+Retrieves a user's body colors configuration as XML format compatible with Roblox clients.
+
+<ParamField path="username" type="string" required>
+  The username of the player
+</ParamField>
+
+### Response
+
+Returns XML data with body color values:
+
+```xml
+<roblox>
+  <Item class="BodyColors">
+    <Properties>
+      <int name="HeadColor">1</int>
+      <int name="LeftArmColor">1</int>
+      <int name="LeftLegColor">1</int>
+      <int name="RightArmColor">1</int>
+      <int name="RightLegColor">1</int>
+      <int name="TorsoColor">1</int>
+    </Properties>
+  </Item>
+</roblox>
+```
+
+<ResponseField name="Content-Type" type="string">
+  Set to `text/plain`
+</ResponseField>
+
+<ResponseField name="Cache-Control" type="string">
+  Set to `no-cache`
+</ResponseField>
+
+### Body Color Parts
+
+The response includes colors for six body parts:
+
+- **Head** - Head color value
+- **Torso** - Torso color value  
+- **LeftArm** - Left arm color value
+- **RightArm** - Right arm color value
+- **LeftLeg** - Left leg color value
+- **RightLeg** - Right leg color value
+
+### Example Request
+
+```bash
+curl "http://mercury.local/asset/bodycolours/Player1"
+```
+
+### Implementation
+
+Source: `(rbxclient)/asset/bodycolours/[username]/+server.ts:16`
+
+---
+
+## Get Character Fetch
+
+`GET /asset/characterfetch/{username}`
+
+Returns a semicolon-delimited string of URLs for a user's character appearance, including body colors and worn assets.
+
+<ParamField path="username" type="string" required>
+  The username of the player
+</ParamField>
+
+### Response
+
+Returns a plain text string with character appearance URLs:
+
+```
+http://mercury.local/asset/bodycolours/username?;http://mercury.local/asset?id=123;http://mercury.local/asset?id=456
+```
+
+<ResponseField name="Content-Type" type="string">
+  Set to `text/plain`
+</ResponseField>
+
+<ResponseField name="Cache-Control" type="string">
+  Set to `no-cache`
+</ResponseField>
+
+### URL Format
+
+The response format is:
+- First URL: Body colors endpoint for the user
+- Following URLs: Asset endpoints for each worn item (separated by semicolons)
+
+### Example Request
+
+```bash
+curl "http://mercury.local/asset/characterfetch/Player1"
+```
+
+### Implementation
+
+Source: `(rbxclient)/asset/characterfetch/[username]/+server.ts:18`
+
+---
+
+## Get Script State
+
+`GET /asset/getscriptstate`
+
+Returns the script state configuration. Always returns a fixed value.
+
+### Response
+
+Returns a plain text string:
+
+```
+0 0 1 0
+```
+
+These values control script execution permissions in the client.
+
+### Example Request
+
+```bash
+curl "http://mercury.local/asset/getscriptstate"
+```
+
+### Implementation
+
+Source: `(rbxclient)/asset/getscriptstate/+server.ts:1`

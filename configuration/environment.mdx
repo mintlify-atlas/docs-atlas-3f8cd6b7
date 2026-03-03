@@ -1,0 +1,110 @@
+---
+title: 'Environment Variables'
+description: 'Configure Mercury Core using environment variables'
+---
+
+Mercury Core uses environment variables to configure runtime settings that should not be committed to source control, such as passwords and server ports.
+
+Environment variables are typically stored in a `.env` file in the `Site` directory. An example file is provided at `Site/.env.example`.
+
+## Required Variables
+
+<ParamField path="ORIGIN" type="string" required>
+  The full URL origin of your Mercury Core site, including the protocol.
+  
+  ```bash
+  ORIGIN=https://mercs.dev
+  ```
+</ParamField>
+
+<ParamField path="PORT" type="number" required>
+  The port on which the Mercury Core site will listen.
+  
+  ```bash
+  PORT=4443
+  ```
+</ParamField>
+
+<ParamField path="EMAIL_PASSWORD" type="string" required>
+  The password for authenticating with your SMTP server. This corresponds to the `Username` configured in the `Email` section of `mercury.core.ts`.
+  
+  ```bash
+  EMAIL_PASSWORD=password
+  ```
+  
+  <Warning>
+  Never commit this password to source control. Keep it secure in your `.env` file.
+  </Warning>
+</ParamField>
+
+<ParamField path="RCC_KEY" type="string" required>
+  Authentication key for the RCC service proxy.
+  
+  ```bash
+  RCC_KEY=password
+  ```
+  
+  <Info>
+  The password, port, and RCCService key may be changed if required.
+  </Info>
+</ParamField>
+
+<ParamField path="GAMESERVER_KEY" type="string" required>
+  Authentication key for gameserver communication.
+  
+  ```bash
+  GAMESERVER_KEY=password
+  ```
+</ParamField>
+
+<ParamField path="OPEN_CLOUD_KEY" type="string" required>
+  API key for Open Cloud services.
+  
+  ```bash
+  OPEN_CLOUD_KEY=whatever
+  ```
+</ParamField>
+
+## Optional Variables
+
+<ParamField path="BODY_SIZE_LIMIT" type="string">
+  Sets the maximum allowed size for request bodies. Useful for allowing large file uploads.
+  
+  See [SvelteKit adapter-node documentation](https://svelte.dev/docs/kit/adapter-node#Environment-variables-BODY_SIZE_LIMIT) for details.
+  
+  ```bash
+  BODY_SIZE_LIMIT=1G
+  ```
+</ParamField>
+
+## Example .env File
+
+Here's a complete example of a `.env` file:
+
+```bash
+ORIGIN=https://mercs.dev
+PORT=4443
+BODY_SIZE_LIMIT=1G
+EMAIL_PASSWORD=password
+RCC_KEY=password
+GAMESERVER_KEY=password
+OPEN_CLOUD_KEY=whatever
+```
+
+## Security Best Practices
+
+<Warning>
+**Never commit your `.env` file to version control.** Ensure it's included in your `.gitignore` file.
+</Warning>
+
+1. Use strong, unique passwords for all authentication keys
+2. Rotate credentials periodically
+3. Limit access to the `.env` file on your server
+4. Use different credentials for development and production environments
+5. Consider using a secrets management service for production deployments
+
+## Loading Environment Variables
+
+Mercury Core automatically loads environment variables from the `.env` file in the `Site` directory when the application starts. No additional configuration is needed.
+
+For production deployments, you may want to set environment variables directly in your hosting environment rather than using a `.env` file.

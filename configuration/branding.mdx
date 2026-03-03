@@ -1,0 +1,218 @@
+---
+title: 'Branding and Customization'
+description: 'Customize the appearance and branding of your Mercury Core revival'
+---
+
+Mercury Core provides extensive branding and customization options to make your revival unique. All branding assets are stored in the `Assets` directory and configured in `mercury.core.ts`.
+
+## Branding Configuration
+
+The `Branding` section in `mercury.core.ts` controls your revival's visual identity:
+
+```typescript
+Branding: {
+  Favicon: "Branding/Favicon.svg",
+  Icon: "Branding/Icon.svg",
+  Tagline: "Revival tagline",
+  Descriptions: {
+    "Endless possibilites":
+      "Create or play your favourite games and customise your character with items on our catalog.",
+    "New features":
+      "In addition to full client usability, additional features such as security fixes, QoL fixes and an easy to use website make your experience better.",
+    "Same nostalgia":
+      "All of our clients will remain as vanilla as possible, to make sure it's exactly as you remember it.",
+  },
+}
+```
+
+## Icon and Favicon
+
+<ParamField path="Favicon" type="string" required>
+  Path to your revival's favicon in the Assets directory. May be in any browser-supported format (SVG, PNG, ICO, etc.).
+  
+  The favicon appears in browser tabs and bookmarks.
+  
+  ```typescript
+  Favicon: "Branding/Favicon.svg"
+  ```
+</ParamField>
+
+<ParamField path="Icon" type="string" required>
+  Path to your revival's logo icon in the Assets directory. May be in any browser-supported format.
+  
+  The icon is displayed throughout the site interface.
+  
+  ```typescript
+  Icon: "Branding/Icon.svg"
+  ```
+</ParamField>
+
+<Tip>
+SVG format is recommended for icons as they scale cleanly at any size.
+</Tip>
+
+## Tagline
+
+<ParamField path="Tagline" type="string" required>
+  A very short tagline for your revival. This is displayed in the footer as well as on the login and register pages.
+  
+  ```typescript
+  Tagline: "Revival tagline"
+  ```
+  
+  <Info>
+  If set to an empty string, the tagline will not display.
+  </Info>
+</ParamField>
+
+## Feature Descriptions
+
+<ParamField path="Descriptions" type="object" required>
+  Descriptions for your revival's features. These are displayed on the register page to attract new users.
+  
+  Each description is a key-value pair, where the key is a feature's title and the value is its description.
+  
+  ```typescript
+  Descriptions: {
+    "Endless possibilites":
+      "Create or play your favourite games and customise your character with items on our catalog.",
+    "New features":
+      "In addition to full client usability, additional features such as security fixes, QoL fixes and an easy to use website make your experience better.",
+    "Same nostalgia":
+      "All of our clients will remain as vanilla as possible, to make sure it's exactly as you remember it.",
+  }
+  ```
+</ParamField>
+
+### Customizing Descriptions
+
+You can add, remove, or modify feature descriptions to highlight what makes your revival unique:
+
+```typescript
+Descriptions: {
+  "Your unique feature": "Description of what makes your revival special",
+  "Another feature": "More details about your revival",
+  "Community focused": "We prioritize player experience and feedback",
+}
+```
+
+## Default Images
+
+The `Images` section controls default images for places that don't have custom assets:
+
+```typescript
+Images: {
+  DefaultPlaceIcons: ["Images/DefaultIcon1.avif"],
+  DefaultPlaceThumbnails: [
+    "Images/DefaultThumbnail1.avif",
+    "Images/DefaultThumbnail2.avif",
+    "Images/DefaultThumbnail3.avif",
+  ],
+}
+```
+
+<ParamField path="DefaultPlaceIcons" type="string[]" required>
+  Array of paths for default place icons in the Assets directory. May be in any browser-supported format.
+  
+  Place icons are small square images displayed in game listings.
+</ParamField>
+
+<ParamField path="DefaultPlaceThumbnails" type="string[]" required>
+  Array of paths for default place thumbnails in the Assets directory. May be in any browser-supported format.
+  
+  Place thumbnails are larger images used in game detail pages and featured listings.
+</ParamField>
+
+<Tip>
+Providing multiple default images allows Mercury Core to randomly select from them, adding visual variety.
+</Tip>
+
+## Themes
+
+Mercury Core supports custom CSS themes to completely transform the look of your revival:
+
+```typescript
+Themes: [
+  {
+    Name: "Standard",
+    Path: "Themes/Standard.css",
+  },
+]
+```
+
+<ParamField path="Themes" type="array" required>
+  Configuration for the revival's available themes. The first theme in the array will be the default theme.
+  
+  Each theme object contains:
+  - `Name`: The display name of the theme
+  - `Path`: Path to the theme's CSS file in the Assets directory
+</ParamField>
+
+### Adding Multiple Themes
+
+You can offer multiple themes for users to choose from:
+
+```typescript
+Themes: [
+  {
+    Name: "Light",
+    Path: "Themes/Light.css",
+  },
+  {
+    Name: "Dark",
+    Path: "Themes/Dark.css",
+  },
+  {
+    Name: "Retro",
+    Path: "Themes/Retro.css",
+  },
+]
+```
+
+<Note>
+The first theme in the array is the default theme shown to new users.
+</Note>
+
+## Currency Symbol
+
+Customize your revival's currency symbol to give it a unique identity:
+
+```typescript
+CurrencySymbol: "屌"
+```
+
+<ParamField path="CurrencySymbol" type="string" required>
+  The symbol for your revival's currency. Placed before the amount throughout the site.
+  
+  Can be any character or emoji.
+</ParamField>
+
+## Assets Directory Structure
+
+Organize your branding assets in the `Assets` directory:
+
+```
+Assets/
+├── Branding/
+│   ├── Favicon.svg
+│   └── Icon.svg
+├── Images/
+│   ├── DefaultIcon1.avif
+│   ├── DefaultThumbnail1.avif
+│   ├── DefaultThumbnail2.avif
+│   └── DefaultThumbnail3.avif
+└── Themes/
+    └── Standard.css
+```
+
+<Tip>
+Use web-optimized formats like AVIF or WebP for images to reduce file sizes and improve load times.
+</Tip>
+
+## Applying Changes
+
+<Warning>
+After modifying branding configuration in `mercury.core.ts`, you must rebuild Mercury Core for changes to take effect in production.
+</Warning>
+
+For development environments, changes may be hot-reloaded depending on your setup.

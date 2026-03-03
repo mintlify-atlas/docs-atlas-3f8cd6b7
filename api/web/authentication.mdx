@@ -1,0 +1,224 @@
+---
+title: Authentication
+description: API endpoints for user authentication and session management
+---
+
+## Overview
+
+Mercury Core uses session-based authentication with secure cookies. All authentication endpoints are form-based and redirect on success.
+
+## Login
+
+Authenticate a user and create a session.
+
+### Request
+
+```http
+POST /login
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField body="username" type="string" required>
+  Username (case-insensitive). Must match the username validation pattern.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User password. Minimum 1 character, maximum 6969 characters.
+</ParamField>
+
+### Response
+
+On success, sets a session cookie and redirects to `/home`.
+
+<ResponseField name="session" type="cookie">
+  Session cookie with 30-day expiration
+  - Name: `session`
+  - Max Age: 30 days
+  - Secure: true (in production)
+  - Path: `/`
+</ResponseField>
+
+### Errors
+
+<ResponseField name="username" type="string">
+  Empty string if username is invalid
+</ResponseField>
+
+<ResponseField name="password" type="string">
+  "Incorrect username or password" - Generic error message for security
+</ResponseField>
+
+### Implementation Details
+
+Passwords are verified using Bun's password verification against hashed passwords stored in the database. The implementation intentionally provides generic error messages to prevent user enumeration attacks.
+
+Source: `Site/src/routes/(plain)/login/+page.server.ts:24-49`
+
+---
+
+## Register
+
+Create a new user account and initiate a session.
+
+### Request
+
+```http
+POST /register?/register
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField body="username" type="string" required>
+  Desired username. Must be unique and match validation pattern.
+</ParamField>
+
+<ParamField body="email" type="string">
+  Email address (if enabled in configuration). Must be RFC-5321 compliant.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Password. Minimum 16 characters, maximum 6969 characters.
+</ParamField>
+
+<ParamField body="cpassword" type="string" required>
+  Password confirmation. Must match the password field.
+</ParamField>
+
+<ParamField body="regkey" type="string">
+  Registration key (if enabled in configuration). Must include the configured prefix.
+</ParamField>
+
+### Response
+
+On success, creates the user account, requests avatar render, sets session cookie, and redirects to `/home`.
+
+<ResponseField name="session" type="cookie">
+  Session cookie with 30-day expiration
+</ResponseField>
+
+<ResponseField name="user" type="object">
+  Created user record with:
+  - `id`: User record ID
+  - `username`: Confirmed username
+  - `permissionLevel`: 1 (standard user)
+  - `bodyColours`: Default body colors from config
+</ResponseField>
+
+### Validation Errors
+
+<ResponseField name="password" type="string">
+  "Passwords do not match" - When password and cpassword don't match
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  "This username is already in use" - Username conflict
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  "This email is already in use" - Email conflict (if emails enabled)
+</ResponseField>
+
+<ResponseField name="regkey" type="string">
+  - "Registration key is invalid" - Invalid or malformed key
+  - "This registration key has ran out of uses" - Depleted key
+</ResponseField>
+
+### Initial Account Creation
+
+The first account created on a Mercury instance uses a special endpoint with relaxed requirements.
+
+```http
+POST /register?/initialAccount
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField body="username" type="string" required>
+  Admin username
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Minimum 1 character (relaxed requirement)
+</ParamField>
+
+<ParamField body="cpassword" type="string" required>
+  Password confirmation
+</ParamField>
+
+The initial account is created with `permissionLevel: 5` (administrator).
+
+Source: `Site/src/routes/(plain)/register/+page.server.ts:45-154`
+
+---
+
+## Logout
+
+Invalidate all user sessions and redirect to login.
+
+### Request
+
+```http
+POST /settings?/sessions
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Current password for confirmation
+</ParamField>
+
+### Response
+
+On success, invalidates all sessions for the user, deletes the session cookie, and redirects to `/login`.
+
+<ResponseField name="sessions" type="void">
+  All user sessions are invalidated in the database
+</ResponseField>
+
+### Errors
+
+<ResponseField name="password" type="string">
+  "Incorrect password" - Password verification failed
+</ResponseField>
+
+Source: `Site/src/routes/(main)/settings/+page.server.ts:88-105`
+
+---
+
+## Session Validation
+
+Sessions are validated server-side on each request using the `validateSessionToken` function.
+
+### Token Validation Process
+
+1. Extract session token from cookie
+2. Query database for session and associated user
+3. Return session and user data if valid
+4. Return null values if invalid or expired
+
+### Session Structure
+
+<ResponseField name="session" type="string">
+  Session token (random identifier)
+</ResponseField>
+
+<ResponseField name="user" type="User">
+  User object containing:
+  - `id`: User record ID
+  - `username`: Username
+  - `permissionLevel`: Permission level (1-5)
+  - Additional user properties
+</ResponseField>
+
+### Authorization Levels
+
+The `authorise` function enforces permission levels:
+
+- **Level 1**: Standard user
+- **Level 4**: Moderator
+- **Level 5**: Administrator
+
+Requests without valid sessions redirect to `/login`. Requests with insufficient permissions return 403 Forbidden.
+
+Source: `Site/src/lib/server/auth.ts:11-68`

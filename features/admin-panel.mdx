@@ -1,0 +1,608 @@
+---
+title: Admin Panel
+description: Administrative tools and moderation features in Mercury Core
+---
+
+Mercury Core includes a comprehensive admin panel for managing users, content, and platform operations. Access requires appropriate permission levels.
+
+## Permission Levels
+
+Admin features are gated by permission levels:
+
+<CardGroup cols={3}>
+  <Card title="Level 3+" icon="shield">
+    **Moderator**
+    
+    - Access admin panel
+    - View system status
+    - Access asset moderation
+  </Card>
+  
+  <Card title="Level 4+" icon="shield-check">
+    **Administrator**
+    
+    - User moderation
+    - Content moderation
+    - Server management
+  </Card>
+  
+  <Card title="Level 5" icon="crown">
+    **Super Admin**
+    
+    - All admin features
+    - Account management
+    - Registration keys
+    - Transaction logs
+    - Audit logs
+  </Card>
+</CardGroup>
+
+## Admin Dashboard
+
+The main admin panel is located at `/admin` (requires level 3+).
+
+### System Overview
+
+The dashboard displays:
+
+- **Free Memory:** Available system RAM
+- **Total Memory:** Total system RAM
+- **System Health:** Memory usage percentage
+- **Quick Links:** Navigation to admin tools
+
+**Source:** `Site/src/routes/(main)/admin/+page.server.ts:6-13`
+
+## User Moderation
+
+Manage and moderate users at `/admin/moderation` (requires level 4+).
+
+### Moderation Actions
+
+Four moderation actions are available:
+
+<Tabs>
+  <Tab title="Warning">
+    ### Issue Warning
+    
+    Give a user a formal warning:
+    
+    - User can still access platform
+    - Warning is recorded in moderation history
+    - Does not restrict gameplay
+    - Useful for first-time offenses
+    
+    **Process:**
+    1. Enter username
+    2. Select "Warning" action
+    3. Provide reason (15-150 characters)
+    4. Submit moderation action
+    
+    **Audit Log:** `Warn {username}: {reason}`
+  </Tab>
+  
+  <Tab title="Ban">
+    ### Temporary Ban
+    
+    Ban a user until a specific date:
+    
+    - User cannot join games
+    - Can still access website
+    - Automatically expires on specified date
+    - Suitable for repeat offenders
+    
+    **Requirements:**
+    - Username of user to ban
+    - Ban expiration date (must be in future)
+    - Reason (15-150 characters)
+    
+    **While Banned:**
+    - User sees 403 error when attempting to join games
+    - Message: "You cannot currently play games"
+    - Other site features remain accessible
+    
+    **Source:** `Site/src/routes/(main)/admin/moderation/+page.server.ts:126-132`
+  </Tab>
+  
+  <Tab title="Termination">
+    ### Permanent Ban
+    
+    Permanently ban a user:
+    
+    - Never expires automatically
+    - Prevents game access indefinitely
+    - Requires manual unban by administrator
+    - Reserved for severe violations
+    
+    **Use Cases:**
+    - Serious terms of service violations
+    - Repeated offenses after bans
+    - Malicious behavior
+    - Security threats
+    
+    **Audit Log:** `Terminate {username}: {reason}`
+  </Tab>
+  
+  <Tab title="Unban">
+    ### Remove Moderation
+    
+    Unban a previously moderated user:
+    
+    - Removes active warning, ban, or termination
+    - Restores full platform access
+    - Records unban in audit log
+    
+    **Validation:**
+    - User must have active moderation
+    - Cannot unban user who was never moderated
+    - Returns error if no active moderation found
+    
+    **Audit Log:** `Unban {username}`
+    
+    **Source:** `Site/src/routes/(main)/admin/moderation/+page.server.ts:90-112`
+  </Tab>
+</Tabs>
+
+### Moderation Rules
+
+**Protected Users:**
+- Cannot moderate users with permission level > 2
+- Staff members are immune to moderation
+- Prevents abuse of power
+
+**Self-Moderation:**
+- Administrators cannot moderate themselves
+- Prevents accidental self-bans
+
+**Duplicate Prevention:**
+- Cannot moderate a user who already has active moderation
+- Must unban first, then apply new moderation
+
+**Rate Limiting:**
+- Moderation actions limited to 30 per time window
+- Prevents abuse and mistakes
+
+**Source:** `Site/src/routes/(main)/admin/moderation/+page.server.ts:64-124`
+
+### Associated Reports
+
+Moderators can access moderation form with pre-filled data from reports:
+
+```
+/admin/moderation?report={reportId}
+```
+
+This automatically fills:
+- Username of reported user
+- Reason from report note
+
+**Source:** `Site/src/routes/(main)/admin/moderation/+page.server.ts:29-52`
+
+## Asset Moderation
+
+Review and approve user-generated content at `/admin/asset` (requires level 3+).
+
+### Asset Review Queue
+
+The asset moderation page displays:
+
+- All assets pending approval ("Hidden" visibility)
+- Asset thumbnails and previews
+- Creator information
+- Asset type and metadata
+- Quick action buttons
+
+### Moderation Actions
+
+<CardGroup cols={2}>
+  <Card title="Approve" icon="check">
+    Mark asset as "Visible"
+    
+    - Appears in catalog
+    - Can be purchased
+    - Can be equipped
+    - Audit log created
+  </Card>
+  
+  <Card title="Deny" icon="ban">
+    Mark asset as "Moderated"
+    
+    - Hidden from catalog
+    - Cannot be purchased
+    - Creator can still see it
+    - Audit log created
+  </Card>
+  
+  <Card title="Re-render" icon="rotate">
+    Request new thumbnail
+    
+    - Submits to RCC queue
+    - Only for clothing/models
+    - Rate limited
+    - Returns new icon URL
+  </Card>
+  
+  <Card title="Purge" icon="trash">
+    Permanently delete
+    
+    - Removes from database
+    - Deletes all files
+    - Cannot be undone
+    - For severe violations
+  </Card>
+</CardGroup>
+
+**Source:** `Site/src/routes/(main)/admin/asset/+page.server.ts:60-106`
+
+See the [Asset Catalog](/features/asset-catalog#moderation) documentation for detailed moderation workflows.
+
+## Account Management
+
+Super administrators can manage user accounts at `/admin/accounts` (requires level 5).
+
+### User List
+
+View all registered users:
+
+- Username
+- Account status
+- Permission level
+- Account creation date
+
+### Password Reset
+
+Administrators can reset user passwords:
+
+<Steps>
+  <Step title="Select User">
+    Enter the username of the account
+  </Step>
+  
+  <Step title="Set New Password">
+    Provide a new password (minimum 1 character for admin reset)
+  </Step>
+  
+  <Step title="Confirm">
+    Submit the password change form
+  </Step>
+  
+  <Step title="Audit">
+    Action is logged: "Change account password for {username}"
+  </Step>
+</Steps>
+
+**Security:**
+- Rate limited to 30 requests per time window
+- Requires super admin privileges
+- All password changes are audited
+- User's sessions remain active (they won't be logged out)
+
+**Source:** `Site/src/routes/(main)/admin/accounts/+page.server.ts:34-64`
+
+## Registration Keys
+
+Manage registration keys at `/admin/regkeys` (requires level 5).
+
+Only available when `Registration.Keys.Enabled` is true.
+
+### Key Management
+
+<Tabs>
+  <Tab title="Create Keys">
+    ### Generate Registration Keys
+    
+    Create keys to control user registration:
+    
+    **Key Configuration:**
+    
+    **Custom Key (Optional):**
+    - Specify your own key string
+    - 3-50 characters
+    - Must be unique
+    - Prefixed with configured prefix
+    
+    **Expiry Date (Optional):**
+    - Set when key becomes invalid
+    - Must be in the future
+    - Keys expire automatically
+    
+    **Uses:**
+    - 1-100 uses per key
+    - Decrements on each registration
+    - Key disabled when uses reach 0
+    
+    **Generated Keys:**
+    If custom key not specified, system generates random key.
+    
+    **Source:** `Site/src/routes/(main)/admin/regkeys/+page.server.ts:56-99`
+  </Tab>
+  
+  <Tab title="View Keys">
+    ### Active Registration Keys
+    
+    See all registration keys:
+    
+    - **Key ID:** Full key with prefix
+    - **Creator:** Admin who created the key
+    - **Created:** When key was generated
+    - **Uses Left:** Remaining registrations
+    - **Expiry:** When key expires (if set)
+    - **Status:** Active/Disabled
+    
+    **Key Format:**
+    ```
+    {prefix}{keyId}
+    ```
+    
+    Example: `MC-abc123def456`
+  </Tab>
+  
+  <Tab title="Disable Keys">
+    ### Revoke Keys
+    
+    Disable a registration key:
+    
+    - Sets `usesLeft` to 0
+    - Key cannot be used for registration
+    - Prevents further account creation
+    - Cannot be re-enabled (create new key instead)
+    
+    **Use Cases:**
+    - Leaked keys
+    - Temporary registration periods
+    - Event-specific keys
+    
+    **Audit Log:** `Disable registration key {keyId}`
+    
+    **Source:** `Site/src/routes/(main)/admin/regkeys/+page.server.ts:100-126`
+  </Tab>
+</Tabs>
+
+### Key Configuration
+
+Set up registration keys in `Assets/schema.ts`:
+
+```typescript
+Registration: {
+  Keys: {
+    Enabled: true,
+    Prefix: "MC-"  // Shown to users for easy identification
+  }
+}
+```
+
+## User Reports
+
+View user reports at `/admin/reports` (requires level 5).
+
+### Report System
+
+Users can report:
+- Other users
+- Content (assets, places, comments)
+- Inappropriate behavior
+
+### Report Details
+
+Each report includes:
+
+- **Reporter:** User who submitted the report
+- **Reportee:** User being reported
+- **Category:** Type of violation
+- **Note:** Description of the issue
+- **URL:** Link to reported content
+- **Time:** When report was submitted
+- **ID:** Unique report identifier
+
+### Report Actions
+
+From the reports page, administrators can:
+
+1. Review report details
+2. Click link to view reported content
+3. Navigate to moderation page with pre-filled data
+4. Take appropriate moderation action
+
+**Source:** `Site/src/routes/(main)/admin/reports/+page.server.ts:15-20`
+
+## Gameserver Management
+
+Monitor active game servers at `/admin/gameservers` (requires level 5).
+
+### Server Dashboard
+
+View all running dedicated servers:
+
+- Server ID
+- Associated place
+- Active player count
+- Server uptime
+- Connection information
+- Server health status
+
+**Data Source:** Queried from Orbiter's private API
+
+**Source:** `Site/src/routes/(main)/admin/gameservers/+page.server.ts:5-14`
+
+See [Game Hosting](/features/game-hosting#admin-tools) for more details.
+
+## Site Banners
+
+Manage site-wide announcement banners at `/admin/banners` (requires level 5).
+
+### Banner System
+
+<Tabs>
+  <Tab title="Create">
+    ### Create Banner
+    
+    Add announcement banners:
+    
+    **Banner Text:**
+    - Up to 100 characters
+    - Displayed at top of site
+    - Supports plain text
+    
+    **Background Color:**
+    - Hex color code
+    - Sets banner background
+    - Should contrast with text
+    
+    **Text Light:**
+    - Toggle for light/dark text
+    - Use light text on dark backgrounds
+    - Use dark text on light backgrounds
+    
+    **Limits:**
+    - Maximum 3 active banners
+    - Rate limited to 30 creates per time window
+    
+    **Source:** `Site/src/routes/(main)/admin/banners/+page.server.ts:67-89`
+  </Tab>
+  
+  <Tab title="Manage">
+    ### Edit Banners
+    
+    Modify existing banners:
+    
+    **Update Body:**
+    - Change banner text
+    - Up to 100 characters
+    
+    **Update Text Style:**
+    - Toggle light/dark text
+    - Adjust for readability
+    
+    **Show/Hide:**
+    - Toggle banner visibility
+    - Hide temporarily without deleting
+    - Only 3 banners can be active
+    
+    **Delete:**
+    - Soft delete (marks as deleted)
+    - Doesn't actually remove from database
+    - Frees up active banner slot
+    
+    **Source:** `Site/src/routes/(main)/admin/banners/+page.server.ts:90-122`
+  </Tab>
+</Tabs>
+
+### Banner Display
+
+Banners appear:
+- At the top of every page
+- In order of creation
+- With configured colors and text
+- To all users (not just admins)
+
+## Transaction Logs
+
+View all platform transactions at `/admin/transactions` (requires level 5).
+
+### Transaction Dashboard
+
+See complete financial history:
+
+- All user transactions
+- Mint operations (currency creation)
+- Burn operations (currency destruction)
+- Transaction notes and amounts
+- Related users and links
+- Timestamps
+
+**Use Cases:**
+- Audit financial activity
+- Investigate suspicious transactions
+- Monitor economy health
+- Track currency circulation
+
+**Source:** `Site/src/routes/(main)/admin/transactions/+page.server.ts:8-15`
+
+See [Economy System](/features/economy-system#transaction-history) for transaction details.
+
+## Audit Logs
+
+View system audit logs at `/admin/audit` (requires level 5).
+
+### Audit System
+
+All administrative actions are logged:
+
+**Log Categories:**
+- **Account:** Password resets, account changes
+- **Administration:** Banner creation, key management
+- **Economy:** Manual currency operations
+- **Moderation:** Warnings, bans, unbans
+
+### Log Entries
+
+Each log includes:
+
+- **Action Type:** Category of action
+- **Note:** Description of what happened
+- **User:** Administrator who performed action
+- **Created:** Timestamp of action
+
+**Source:** `Site/src/routes/(main)/admin/audit/+page.server.ts:12-18`
+
+### Audit Function
+
+Administrative code calls the audit function:
+
+```typescript
+await db.run("fn::auditLog", [
+  "Category",
+  "Description of action",
+  Record("user", adminUserId)
+])
+```
+
+This ensures all sensitive operations are tracked and attributable.
+
+## Render Queue
+
+Monitor asset rendering at `/admin/renderqueue` (requires level 5).
+
+### Queue Management
+
+View and manage the RCC render queue:
+
+- Pending render jobs
+- In-progress renders
+- Completed renders
+- Failed renders
+
+Useful for:
+- Diagnosing rendering issues
+- Monitoring queue backlog
+- Ensuring assets are processed
+- Troubleshooting RCC service
+
+## Best Practices
+
+### Moderation
+
+- Document reasons clearly for audit trail
+- Use proportional responses (warning before ban)
+- Review reports promptly
+- Communicate with users when possible
+
+### Security
+
+- Limit number of super administrators
+- Audit logs regularly for suspicious activity
+- Rotate passwords periodically
+- Use registration keys to control growth
+
+### Economy Management
+
+- Monitor transaction logs for abuse
+- Adjust fees if inflation occurs
+- Use burns strategically to control supply
+- Track large transactions
+
+### Asset Moderation
+
+- Review asset queue daily
+- Provide feedback to creators when denying
+- Use purge only for severe violations
+- Request re-renders if thumbnails fail

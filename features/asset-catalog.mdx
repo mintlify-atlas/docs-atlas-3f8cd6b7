@@ -1,0 +1,379 @@
+---
+title: Asset Catalog
+description: Asset management, catalog system, and thumbnail rendering in Mercury Core
+---
+
+Mercury Core includes a comprehensive asset system for creating, managing, and distributing user-generated content including clothing, models, gear, and more.
+
+## Asset Types
+
+Mercury Core supports multiple asset types:
+
+<CardGroup cols={2}>
+  <Card title="Clothing" icon="shirt">
+    **Type 11:** Shirts  
+    **Type 12:** Pants  
+    **Type 18:** T-Shirts
+    
+    Wearable clothing items with automatic thumbnail rendering
+  </Card>
+  
+  <Card title="Accessories" icon="hat-cowboy">
+    **Type 2:** Faces  
+    **Type 8:** Hats/Models  
+    **Type 19:** Heads
+    
+    Character customization accessories
+  </Card>
+  
+  <Card title="Functional" icon="wrench">
+    **Type 17:** Gear
+    
+    Interactive items with gameplay functionality
+  </Card>
+  
+  <Card title="Other" icon="cube">
+    Additional asset types for future expansion
+  </Card>
+</CardGroup>
+
+## Creating Assets
+
+Users can create assets through the Develop section (`/develop/create`).
+
+### Asset Creation Flow
+
+<Steps>
+  <Step title="Upload Asset Data">
+    Upload the asset file containing the model or texture data
+  </Step>
+  
+  <Step title="Configure Metadata">
+    Set name, description, price, and visibility settings
+  </Step>
+  
+  <Step title="Pay Creation Fee">
+    Creation requires a currency fee to prevent spam (configurable)
+  </Step>
+  
+  <Step title="Submit for Approval">
+    Asset enters moderation queue with "Hidden" visibility
+  </Step>
+  
+  <Step title="Render Thumbnails">
+    System automatically generates thumbnails for clothing and models
+  </Step>
+</Steps>
+
+### Creation Fees
+
+Asset creation costs currency to prevent abuse:
+
+```typescript
+// Fee calculation based on base fee
+const fee = 0.1
+const assetPrice = Math.round(fee * 75 * 1e6)
+```
+
+This fee is **burned** (removed from circulation) rather than transferred.
+
+**Source:** `Site/src/lib/server/economy.ts:129-149`
+
+## Asset Configuration
+
+Asset creators can manage their assets through the settings page (`/catalog/{id}/{name}/settings`).
+
+<Tabs>
+  <Tab title="Basic Settings">
+    ### Asset Metadata
+    
+    **Name:**
+    - 3-50 characters
+    - Used in URLs and listings
+    - Filtered for profanity
+    
+    **Description:**
+    - Up to 1000 characters
+    - Supports formatted text
+    - Filtered for profanity
+    - Optional (can be empty)
+    
+    **Price:**
+    - 0-999 currency units
+    - Integer values only
+    - 0 = free asset
+    
+    **For Sale:**
+    - Toggle to enable/disable purchasing
+    - When disabled, asset cannot be bought even if priced
+    
+    **Source:** `Site/src/routes/(main)/catalog/[id=asset]/[name]/settings/+page.server.ts:27-35`
+  </Tab>
+  
+  <Tab title="Permissions">
+    ### Edit Access
+    
+    Who can edit asset settings:
+    
+    - **Asset Creator:** Full control over their own assets
+    - **Administrators (Level 4+):** Can edit any asset
+    
+    Non-creators and non-admins receive a 403 error when attempting to access settings.
+    
+    **Source:** `Site/src/routes/(main)/catalog/[id=asset]/[name]/settings/+page.server.ts:91-92`
+  </Tab>
+</Tabs>
+
+## Catalog Browsing
+
+The catalog page (`/catalog`) provides asset discovery.
+
+### Catalog Features
+
+- **Pagination:** Browse through pages of assets
+- **Asset Grid:** Visual grid layout showing thumbnails
+- **Price Display:** Currency symbol and price for each asset
+- **Quick Access:** Click to view asset details
+
+### Asset Visibility
+
+Assets have visibility states:
+
+- **Visible:** Approved and shown in catalog
+- **Hidden:** Pending approval, only visible to creator
+- **Moderated:** Rejected, hidden from catalog
+
+Only "Visible" assets appear in public catalog listings.
+
+**Source:** `Site/src/routes/(main)/catalog/+page.server.ts:11-21`
+
+## Asset Details
+
+The asset page (`/catalog/{id}/{name}`) displays complete asset information.
+
+### Asset Page Sections
+
+<Accordion title="Asset Information">
+  - **Creator:** User who uploaded the asset
+  - **Creation Date:** When asset was created
+  - **Last Updated:** Most recent modification time
+  - **Type:** Asset type identifier
+  - **Price:** Cost to purchase
+  - **For Sale Status:** Whether asset can be purchased
+  - **Sold Count:** Number of times purchased
+</Accordion>
+
+<Accordion title="Comments Section">
+  Users can comment on assets:
+  
+  - Up to 1000 characters per comment
+  - Filtered for profanity
+  - Rate limited to 5 comments per time window
+  - Creators receive notifications when users comment
+  - Supports threaded replies
+  
+  **Source:** `Site/src/routes/(main)/catalog/[id=asset]/[name]/+page.server.ts:123-162`
+</Accordion>
+
+<Accordion title="Purchase Section">
+  Players can purchase assets they don't own:
+  
+  - Shows current balance
+  - Displays total cost including fees
+  - Random confirmation messages for engagement
+  - Transaction is recorded in economy service
+  
+  **Source:** `Site/src/routes/(main)/catalog/[id=asset]/[name]/+page.server.ts:163-217`
+</Accordion>
+
+## Purchasing Assets
+
+### Purchase Process
+
+<Steps>
+  <Step title="Check Eligibility">
+    - User must not already own the asset
+    - Asset must be "Visible" (approved)
+    - Asset must be marked "For Sale"
+  </Step>
+  
+  <Step title="Process Transaction">
+    - Currency is transferred from buyer to creator
+    - Platform fee (10%) is deducted
+    - Transaction is recorded with link to asset
+  </Step>
+  
+  <Step title="Grant Ownership">
+    - Create `ownsAsset` relationship in database
+    - Asset appears in user's inventory
+    - User can now equip the asset
+  </Step>
+  
+  <Step title="Send Notification">
+    - Creator receives notification of purchase
+    - Notification includes buyer username and asset name
+  </Step>
+</Steps>
+
+### Transaction Details
+
+Purchases create economy transactions:
+
+```typescript
+{
+  From: buyerId,
+  To: creatorId,
+  Amount: assetPrice,
+  Note: `Purchased asset {assetName}`,
+  Link: `/catalog/{assetId}/{slug}`,
+  Fee: 0.1  // 10% platform fee
+}
+```
+
+**Free Assets:**
+Assets priced at 0 can be claimed without creating a transaction (future implementation).
+
+## Thumbnail System
+
+Mercury Core automatically generates thumbnails for supported asset types.
+
+### Render Queue
+
+The RCC (Render Cloud Compute) service handles thumbnail generation:
+
+- **Clothing (Types 11, 12):** Rendered on avatar mannequin
+- **Models (Type 8):** Rendered as 3D model preview
+
+### Requesting Renders
+
+Renders can be triggered:
+
+1. **Automatically:** When asset is created or updated
+2. **Manually:** Administrators can request re-renders
+3. **On Approval:** When moderators approve assets
+
+**Rate Limiting:** Re-render requests are limited to 10 per time window for admins.
+
+**Source:** `Site/src/routes/(main)/catalog/[id=asset]/[name]/+page.server.ts:94-121`
+
+### Thumbnail Storage
+
+Thumbnails are stored as image files:
+
+- Path: `data/thumbnails/{assetId}`
+- Served via HTTP endpoints
+- Cached by browsers for performance
+
+### Icon Endpoints
+
+Assets have dedicated icon endpoints:
+
+```
+/catalog/{id}/{name}/icon?r={random}
+```
+
+The `r` parameter forces cache refresh after re-renders.
+
+## Inventory
+
+Players can view owned assets at `/inventory`.
+
+### Inventory Features
+
+- **Pagination:** Browse through owned assets
+- **Asset Display:** Shows name, type, and thumbnail
+- **Quick Equip:** Link to character page to equip items
+- **Asset Count:** Total number of owned assets
+
+**Source:** `Site/src/routes/(main)/inventory/+page.server.ts:13-24`
+
+### Ownership Tracking
+
+Asset ownership is tracked via graph relationships:
+
+```
+user->ownsAsset->asset
+```
+
+This allows efficient queries for:
+- All assets owned by a user
+- All users who own a specific asset
+- Purchase history and statistics
+
+## Moderation
+
+Administrators moderate assets to ensure quality and appropriateness.
+
+### Asset Moderation Queue
+
+Access at `/admin/asset` (requires permission level 3+).
+
+<Tabs>
+  <Tab title="Pending Assets">
+    View all assets awaiting approval:
+    
+    - Asset name and ID
+    - Creator information
+    - Asset type
+    - Thumbnail preview
+    - Quick action buttons
+  </Tab>
+  
+  <Tab title="Approve">
+    Mark asset as "Visible":
+    
+    - Asset appears in catalog
+    - Can be purchased and equipped
+    - Creator is notified (future feature)
+    - Audit log entry is created
+    
+    **Source:** `Site/src/routes/(main)/admin/asset/+page.server.ts:61-68`
+  </Tab>
+  
+  <Tab title="Deny">
+    Mark asset as "Moderated":
+    
+    - Asset is hidden from catalog
+    - Cannot be purchased or equipped
+    - Creator can still view it
+    - Audit log entry is created
+    
+    **Source:** `Site/src/routes/(main)/admin/asset/+page.server.ts:69-76`
+  </Tab>
+  
+  <Tab title="Purge">
+    Permanently delete asset (nuclear option):
+    
+    - Deletes asset record from database
+    - Removes asset files from storage
+    - Removes associated image asset
+    - Removes thumbnail files
+    - Cannot be undone
+    
+    Use for severely inappropriate content.
+    
+    **Source:** `Site/src/routes/(main)/admin/asset/+page.server.ts:89-106`
+  </Tab>
+  
+  <Tab title="Re-render">
+    Request new thumbnails:
+    
+    - Only for clothing and model types
+    - Submits to RCC render queue
+    - Rate limited for abuse prevention
+    - Returns updated icon URL on success
+    
+    **Source:** `Site/src/routes/(main)/admin/asset/+page.server.ts:77-88`
+  </Tab>
+</Tabs>
+
+## Image Assets
+
+Some assets have associated image assets for textures:
+
+- Image assets are separate database records
+- Linked to parent asset via relationships
+- Stored in `data/assets/{imageAssetId}`
+- Used in rendering process
+
+When purging assets, both the main asset and image asset are deleted.

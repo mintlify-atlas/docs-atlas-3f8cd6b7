@@ -1,0 +1,80 @@
+---
+title: Client Integration Overview
+description: Overview of Roblox client integration with Mercury Core
+---
+
+Mercury Core provides a flexible client integration system designed to work with Roblox clients. Client integration involves serving loadscripts, corescripts, and handling client-facing API endpoints that the Roblox client expects.
+
+## How Client Integration Works
+
+When a Roblox client connects to Mercury Core, it makes requests to various endpoints to:
+
+1. Download signed loadscripts (join, visit, studio, host)
+2. Fetch assets and privileged assets
+3. Report client presence and server status
+4. Retrieve character appearance data
+5. Access client configuration settings
+
+All script requests are served as cryptographically signed Lua code using a private key stored in `data/PrivateKey.pem`. The corresponding public key must be patched into your client.
+
+## Privileged Assets
+
+Privileged assets are any assets with IDs hardcoded into the client or depended on by scripts sent to the client. These include:
+
+- **Corescripts** - Core game functionality scripts
+- **Loadscripts** - Scripts for different game modes:
+  - `visit.lua` - Visiting places
+  - `join.lua` - Joining multiplayer games
+  - `studio.lua` - Studio mode
+  - `host.lua` - Hosting game servers
+- **External libraries** - Any third-party libraries your scripts depend on
+
+<Warning>
+  Privileged assets must be placed in the `data/server/assets/{id}` directory following the specific folder structure detailed at [tp-link-extender/2013](https://github.com/tp-link-extender/2013).
+</Warning>
+
+## Asset Loading Priority
+
+When a client requests an asset by ID, Mercury Core checks multiple sources in this order:
+
+1. **Privileged assets** - `data/server/assets/{id}`
+2. **User-uploaded assets** - `data/assets/{id}` (with visibility checks)
+3. **Open Cloud API** - Falls back to Roblox's asset delivery API (cached in `data/assetcache/{id}`)
+
+Privileged assets are served without URL substitution, while user assets have `roblox.com/asset` references automatically replaced with your domain.
+
+## Script Signing
+
+<Warning>
+  The private key for corescript signing should be placed in `data/PrivateKey.pem`, with the corresponding public key patched into the client. Never share or commit your private key.
+</Warning>
+
+All loadscripts are signed using SHA-1 signatures before being sent to the client:
+
+```
+--rbxsig%{signature}%--rbxassetid%{assetId}%
+{script content}
+```
+
+This ensures clients can verify the authenticity of scripts from your server.
+
+## URL Rewriting
+
+Different client versions access endpoints with varying URL patterns. Mercury Core uses Caddy to rewrite legacy endpoint URLs to their modern equivalents:
+
+- `/Asset/Default.ashx` → `/asset`
+- `/Game/Join.ashx` → `/game/join`
+- `/Game/Visit.ashx` → `/game/visit`
+- `/Game/Studio.ashx` → `/game/studio`
+
+See the `Site/Caddyfile` for the complete list of rewrites.
+
+## Client Versions
+
+Mercury Core is designed to be client-agnostic, but you may need to modify loadscripts and corescripts based on your target client version. Older clients often require significant modifications to work properly.
+
+<Warning>
+  If you're using original corescripts provided with the client instead of custom ones, expect to encounter issues that may require heavy modification or complete rewrites. This requires significant internal client knowledge and maintenance effort, with very sparse documentation available for beginners.
+</Warning>
+
+For reference implementations, see the scripts at [tp-link-extender/2013](https://github.com/tp-link-extender/2013).

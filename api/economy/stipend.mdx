@@ -1,0 +1,160 @@
+---
+title: Stipend Operations
+description: Claim stipends and check current stipend amount
+---
+
+## Claim Stipend
+
+```
+POST /stipend/{id}
+```
+
+Claim a stipend for a user. Stipends can be claimed once every 12 hours.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The user identifier claiming the stipend
+</ParamField>
+
+### Response
+
+Returns `200 OK` with no body on success. The stipend amount is minted directly to the user's balance.
+
+### Example Request
+
+```bash
+curl -X POST http://localhost:2009/stipend/alice
+```
+
+### Successful Claim
+
+On success, the user receives 10 units (10,000,000 micro) added to their balance.
+
+### Error Responses
+
+<ResponseField name="error" type="string">
+  Error message if the stipend claim fails
+</ResponseField>
+
+#### Stipend Not Available Yet
+
+If the user attempts to claim before the 12-hour cooldown expires:
+
+**Status Code**: `400 Bad Request`
+
+```bash
+curl -X POST http://localhost:2009/stipend/alice
+```
+
+Error: `Next stipend not available yet`
+
+The cooldown period is 12 hours (43,200,000 milliseconds) from the last stipend claim.
+
+#### Invalid User ID
+
+If the user ID format is invalid:
+
+**Status Code**: `400 Bad Request`
+
+```bash
+curl -X POST http://localhost:2009/stipend/
+```
+
+Returns an error message describing the parsing failure.
+
+#### Validation Errors
+
+Since stipends are implemented as mints, they must pass mint validation:
+
+**Status Code**: `400 Bad Request`
+
+Though unlikely in normal operation, validation ensures:
+- The stipend has an amount (always 10 units)
+- The recipient is specified
+- The note is set (always "Stipend")
+
+---
+
+## Get Current Stipend
+
+```
+GET /currentStipend
+```
+
+Retrieve the current stipend amount.
+
+### Response
+
+Returns the stipend amount as a plain text `uint64` integer representing micro-units.
+
+<ResponseField name="stipend" type="uint64">
+  The current stipend amount in micro-units
+</ResponseField>
+
+### Example Request
+
+```bash
+curl http://localhost:2009/currentStipend
+```
+
+### Example Response
+
+```
+10000000
+```
+
+This represents 10.000000 units.
+
+## Stipend Mechanics
+
+### Amount
+
+The current stipend is fixed at **10 units** (10,000,000 micro-units).
+
+### Cooldown
+
+Users can claim a stipend once every **12 hours** (43,200,000 milliseconds).
+
+The cooldown timer starts from the timestamp of the last successful stipend claim.
+
+### First Claim
+
+Users who have never claimed a stipend before can claim immediately, as their previous stipend timestamp is 0.
+
+### Implementation
+
+Stipends are implemented as Mint transactions with:
+- **To**: The claiming user
+- **Amount**: 10 units (10,000,000 micro)
+- **Note**: "Stipend"
+- **Time**: Current Unix timestamp in milliseconds
+
+These mint events are written to the ledger like any other transaction.
+
+### Checking Eligibility
+
+To determine if a user can claim a stipend:
+
+1. Get the user's last stipend timestamp from their transaction history
+2. Add 43,200,000 milliseconds (12 hours)
+3. Compare to the current time
+4. If current time is greater, the user can claim
+
+### Example Timeline
+
+```
+Last stipend: 2026-03-03 00:00:00 (1709481600000)
+Cooldown ends: 2026-03-03 12:00:00 (1709524800000)
+Current time: 2026-03-03 14:30:00 (1709533800000)
+
+Result: Stipend available ✓
+```
+
+```
+Last stipend: 2026-03-03 00:00:00 (1709481600000)
+Cooldown ends: 2026-03-03 12:00:00 (1709524800000)
+Current time: 2026-03-03 10:00:00 (1709517600000)
+
+Result: Next stipend not available yet ✗
+```

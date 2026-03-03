@@ -1,0 +1,73 @@
+---
+title: Economy Service Overview
+description: Mercury Core's economy service manages user balances, transactions, and currency operations
+---
+
+## Introduction
+
+The Mercury Core Economy Service provides a blockchain-inspired ledger system for managing user balances, transactions, and currency operations. As the code says: "imagine a blockchain but without the blocks or the chain."
+
+## Base URL
+
+The Economy Service runs on port 2009:
+
+```
+http://localhost:2009
+```
+
+## Currency System
+
+The economy uses a micro-unit based currency system:
+
+- **Micro**: 1 (smallest unit)
+- **Milli**: 1,000 micro
+- **Unit**: 1,000,000 micro (standard unit)
+- **Kilo**: 1,000 units
+- **Mega**: 1,000,000 units
+- **Giga**: 1,000,000,000 units
+- **Tera**: 1,000,000,000,000 units
+
+Currency values are represented as `uint64` integers in micro units. For example, `10000000` represents `10.000000 unit`.
+
+## Stipend System
+
+Users can claim a stipend once every 12 hours:
+
+- **Stipend Amount**: 10 units (10,000,000 micro)
+- **Cooldown**: 12 hours (43,200,000 milliseconds)
+
+## Available Endpoints
+
+### Balance Operations
+- `GET /balance/{id}` - Get user balance
+- `GET /currentStipend` - Get current stipend amount
+- `POST /stipend/{id}` - Claim stipend for user
+
+### Transaction Operations
+- `POST /transact` - Create a transaction between users
+- `GET /transactions/{id}` - Get transaction history for a user
+- `GET /transactions` - Get all transactions (admin only)
+
+### Currency Operations
+- `POST /mint` - Create new currency (admin only)
+- `POST /burn` - Destroy currency (admin only)
+
+## Transaction Types
+
+The ledger supports three types of events:
+
+1. **Transaction**: Transfer currency between users
+2. **Mint**: Create new currency for a user
+3. **Burn**: Destroy currency from a user
+
+All events are appended to a JSONL (JSON Lines) ledger file for persistence.
+
+## Error Responses
+
+All endpoints return standard HTTP status codes:
+
+- `200 OK` - Successful operation
+- `400 Bad Request` - Invalid input or validation error
+- `500 Internal Server Error` - Server error
+
+Error responses contain a plain text error message in the response body.

@@ -1,80 +1,289 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get Mercury Core running locally in minutes with this step-by-step guide.
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will walk you through setting up Mercury Core for local development, from installing prerequisites to creating your first account. By the end, you'll have a fully functional Mercury Core instance running on your machine.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  This quickstart is for **development** purposes. For production hosting, see the [Installation](/installation/production) guide.
+</Note>
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="Bun" icon="b">
+    Latest version of Bun runtime and package manager
+    
+    [Download Bun](https://bun.sh)
+  </Card>
+  <Card title="Docker" icon="docker">
+    Latest version of Docker (or Podman as an alternative)
+    
+    [Download Docker](https://docker.com)
+  </Card>
+  <Card title="Modern Browser" icon="browser">
+    Any major browser from early 2024 onwards
+  </Card>
+  <Card title="Terminal" icon="terminal">
+    Command-line access on your system
+  </Card>
+</CardGroup>
+
+<Tip>
+  We recommend using [Visual Studio Code](https://code.visualstudio.com) as your editor with the [Mercury Core development extension pack](https://marketplace.visualstudio.com/items?itemName=MercuryCore.mercurycoredevelopment).
+</Tip>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the Mercury Core repository to your local machine:
+    
+    ```bash
+    git clone https://github.com/your-org/mercury-core.git
+    cd mercury-core
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install all required dependencies using Bun:
+    
+    ```bash
+    bun i
+    ```
+    
+    This will install all packages defined in `Site/package.json` including:
+    - SvelteKit and Svelte 5
+    - TypeScript and type definitions
+    - SurrealDB client
+    - UnoCSS for styling
+    - And more developer tools
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Copy the example environment file and configure it:
+    
+    ```bash
+    cp Site/.env.example Site/.env
+    ```
+    
+    Edit `Site/.env` with your preferred text editor. The default values work for local development:
+    
+    ```bash Site/.env
+    ORIGIN=https://mercs.dev
+    PORT=4443
+    BODY_SIZE_LIMIT=1G
+    EMAIL_PASSWORD=password
+    RCC_KEY=password
+    GAMESERVER_KEY=password
+    OPEN_CLOUD_KEY=whatever
+    ```
+    
+    <Warning>
+      For development, you can use the default values. For production, you **must** change all passwords and keys to secure values.
+    </Warning>
+  </Step>
+
+  <Step title="Start Database and Economy Services">
+    Launch the required backend services using Docker Compose:
+    
+    ```bash
+    docker compose up -d database economy
+    ```
+    
+    This starts:
+    - **SurrealDB** database on port `8000`
+    - **Economy service** (Go-based) on port `2009`
+    
+    <Accordion title="Running without Docker">
+      If you can't use Docker, you can run services manually:
+      
+      **SurrealDB:**
+      ```bash
+      # Install SurrealDB first: https://surrealdb.com/install
+      surreal start -l trace -u=root -p=root file:./data/surreal
+      ```
+      
+      **Economy Service:**
+      ```bash
+      # Install Go first: https://go.dev/dl/
+      cd Economy
+      go run .
+      ```
+      
+      Run these in separate terminal windows or as background processes.
+    </Accordion>
+  </Step>
+
+  <Step title="Start Development Server">
+    Navigate to the Site directory and start the Vite development server:
+    
+    ```bash
+    cd Site
+    bun dev
+    ```
+    
+    You'll see output similar to:
+    ```
+    VITE v5.x.x  ready in xxx ms
+    
+    ➜  Local:   http://localhost:5173/
+    ➜  Network: use --host to expose
+    ```
+    
+    <Note>
+      Navigate to the URL shown in your terminal (usually `http://localhost:5173`). **Do not use HTTPS** for local development.
+    </Note>
+    
+    The development server features:
+    - Hot module replacement (HMR) - changes appear instantly
+    - Type checking and IntelliSense
+    - Fast refresh on file save
+  </Step>
+
+  <Step title="Create Your First Account">
+    Once the server is running:
+    
+    1. Open your browser and navigate to `http://localhost:5173/register`
+    2. Fill out the registration form with your desired username and password
+    3. Complete the account creation process
+    
+    <Tip>
+      Your account will be created with default avatar body colors configured in `mercury.core.ts`:
+      ```typescript mercury.core.ts
+      DefaultBodyColors: {
+        Head: 24,
+        LeftArm: 24,
+        LeftLeg: 119,
+        RightArm: 24,
+        RightLeg: 119,
+        Torso: 23,
+      }
+      ```
+    </Tip>
+  </Step>
+
+  <Step title="Explore Mercury Core">
+    You're all set! You can now:
+    
+    - Browse the home page and explore features
+    - Customize your character in `/character`
+    - Create games in `/develop`
+    - Browse the catalog in `/catalog`
+    - Configure settings in `/settings`
+    
+    <Info>
+      Press **Ctrl+I** in the browser to open the inspector, which lets you select any element and view it in your editor.
+    </Info>
+  </Step>
+</Steps>
+
+## Understanding the Data Directory
+
+Mercury Core stores all persistent data in the `data/` directory (hidden from source control):
+
+```
+data/
+├── assets/       # Binary files: images, meshes, etc.
+├── economy/      # Transaction ledger and economy data
+├── icons/        # Place icons
+├── surreal/      # SurrealDB database files
+└── thumbnails/   # Asset thumbnails
+```
+
+<Warning>
+  The `data/` directory should be kept **private** and backed up regularly. Consider mounting it to an external volume in production.
+</Warning>
+
+## Making Changes
+
+While the development server is running:
+
+1. **Edit any file** in `Site/src/` - changes will reflect immediately in the browser
+2. **Modify configuration** in `mercury.core.ts` to customize branding, features, and behavior
+3. **Check types** by running `bun run check` in the Site directory
+
+<Tip>
+  If you're using WSL2 and changes aren't reflecting, add this to `vite.config.ts`:
+  ```typescript
+  server: { watch: { usePolling: true } }
+  ```
+</Tip>
+
+## Building for Production
+
+To preview how your site will work in production:
+
+```bash
+# From the Site directory
+bun run build
+bun preview
+
+# Or use the combined command
+bun buildview
+```
+
+This creates an optimized production build in `Site/build/` and starts a preview server.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Customize Your Revival" icon="palette" href="/configuration/mercury-core">
+    Learn how to configure branding, themes, and features in `mercury.core.ts`
+  </Card>
+  <Card title="Production Hosting" icon="server" href="/installation/production">
+    Deploy Mercury Core to a production server with Caddy and Docker
+  </Card>
+  <Card title="Client Integration" icon="plug" href="/client/overview">
+    Connect Roblox revival clients to your Mercury Core instance
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/concepts/architecture">
+    Understand Mercury Core's system architecture and services
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port already in use">
+    If port 5173 is already in use, Vite will automatically try the next available port. Check your terminal output for the actual URL.
+  </Accordion>
+  
+  <Accordion title="Database connection failed">
+    Ensure Docker containers are running:
+    ```bash
+    docker ps
+    ```
+    
+    You should see `database` and `economy` containers. If not, run:
+    ```bash
+    docker compose up -d database economy
+    ```
+  </Accordion>
+  
+  <Accordion title="Changes not reflecting">
+    Try:
+    1. Hard refresh your browser (Ctrl+Shift+R or Cmd+Shift+R)
+    2. Restart the dev server (Ctrl+C then `bun dev`)
+    3. Clear browser cache
+    4. If on WSL2, enable polling in vite.config.ts (see tip above)
+  </Accordion>
+  
+  <Accordion title="Bun command not found">
+    Ensure Bun is installed and in your PATH:
+    ```bash
+    curl -fsSL https://bun.sh/install | bash
+    ```
+    
+    Then restart your terminal.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  Need help? Check out the [Installation](/installation/overview) guide for more detailed setup instructions or the [Configuration](/configuration/mercury-core) guide to customize your instance.
 </Note>

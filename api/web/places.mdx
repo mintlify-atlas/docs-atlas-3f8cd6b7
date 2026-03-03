@@ -1,0 +1,453 @@
+---
+title: Places
+description: API endpoints for game/place management and gameplay
+---
+
+## Overview
+
+Places (also known as games) are user-created game servers. These endpoints handle viewing, managing, and joining places.
+
+## Get Place Details
+
+Retrieve detailed information about a specific place.
+
+### Request
+
+```http
+GET /place/{id}/{name}
+```
+
+<ParamField path="id" type="number" required>
+  Place asset ID
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  URL-encoded place name (used for SEO-friendly URLs)
+</ParamField>
+
+<ParamField query="privateServer" type="string">
+  Private server ticket for accessing private places
+</ParamField>
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="number">
+  Place asset ID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Place name
+</ResponseField>
+
+<ResponseField name="slug" type="string">
+  URL-safe encoded name
+</ResponseField>
+
+<ResponseField name="description" type="object">
+  Place description
+  - `text`: Description content
+  - `updated`: Last update timestamp
+</ResponseField>
+
+<ResponseField name="ownerUser" type="BasicUser">
+  Place owner information
+</ResponseField>
+
+<ResponseField name="ownerUsername" type="string">
+  Owner's username
+</ResponseField>
+
+<ResponseField name="created" type="string">
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updated" type="Date">
+  Last update timestamp
+</ResponseField>
+
+<ResponseField name="maxPlayers" type="number">
+  Maximum player capacity
+</ResponseField>
+
+<ResponseField name="privateServer" type="boolean">
+  Whether this is a private server
+</ResponseField>
+
+<ResponseField name="privateTicket" type="string">
+  Private server access ticket (if applicable)
+</ResponseField>
+
+<ResponseField name="serverTicket" type="string">
+  Server connection ticket (empty unless user is owner with permission level 5)
+</ResponseField>
+
+<ResponseField name="likeCount" type="number">
+  Number of likes
+</ResponseField>
+
+<ResponseField name="dislikeCount" type="number">
+  Number of dislikes
+</ResponseField>
+
+<ResponseField name="likes" type="boolean">
+  Whether current user likes this place
+</ResponseField>
+
+<ResponseField name="dislikes" type="boolean">
+  Whether current user dislikes this place
+</ResponseField>
+
+<ResponseField name="players" type="array">
+  Current players:
+  - `username`: Player username
+  - `status`: "Playing"
+</ResponseField>
+
+<ResponseField name="serverPing" type="number">
+  Server ping/latency
+</ResponseField>
+
+<ResponseField name="hosting" type="boolean">
+  Whether game server hosting is enabled
+</ResponseField>
+
+<ResponseField name="scheme" type="string">
+  Custom URI scheme for launcher integration
+</ResponseField>
+
+<ResponseField name="orbiterURL" type="string">
+  Orbiter server URL for game connections
+</ResponseField>
+
+<ResponseField name="thumbnails" type="array">
+  Array of thumbnail indices
+</ResponseField>
+
+### Errors
+
+- **404 Not Found**: Place doesn't exist or private server ticket invalid
+- **302 Redirect**: Name mismatch (redirects to correct URL)
+
+Source: `Site/src/routes/(main)/place/[id=asset]/[name]/+page.server.ts:45-80`
+
+---
+
+## Join Place
+
+Generate a ticket to join a game server.
+
+### Request
+
+```http
+POST /place/{id}/{name}?/join
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField path="id" type="number" required>
+  Place asset ID
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Place name
+</ParamField>
+
+<ParamField body="privateTicket" type="string">
+  Private server ticket (if joining private server)
+</ParamField>
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+### Response
+
+<ResponseField name="ticket" type="string">
+  Game session ticket for connecting to the server
+</ResponseField>
+
+### Implementation Details
+
+This endpoint:
+1. Validates the place exists and user has access
+2. Checks if user is moderated (banned from playing)
+3. Invalidates any existing game sessions for the user
+4. Creates a new playing session with a unique ticket
+5. Returns the ticket for client connection
+
+### Errors
+
+- **403 Forbidden**: "You cannot currently play games" - User is moderated
+- **404 Not Found**: Place doesn't exist or invalid private ticket
+
+Source: `Site/src/routes/(main)/place/[id=asset]/[name]/+page.server.ts:116-127`
+
+---
+
+## Start Dedicated Server
+
+Start a dedicated game server for a place.
+
+### Request
+
+```http
+POST /place/{id}/{name}?/start
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField path="id" type="number" required>
+  Place asset ID
+</ParamField>
+
+<ParamField body="privateTicket" type="string">
+  Private server ticket (if applicable)
+</ParamField>
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+### Response
+
+Returns empty response on success.
+
+### Rate Limiting
+
+This endpoint is rate-limited to 20 requests per IP address.
+
+### Implementation Details
+
+1. Verifies user is not moderated
+2. Validates place exists and user has access
+3. Checks for place file existence in `../data/places/{id}`
+4. Sends request to Orbiter to start the game server
+
+### Errors
+
+- **403 Forbidden**: User is moderated
+- **404 Not Found**: Place file not found
+- **500 Internal Server Error**: "Failed to start dedicated server"
+
+Source: `Site/src/routes/(main)/place/[id=asset]/[name]/+page.server.ts:129-153`
+
+---
+
+## Close Dedicated Server
+
+Stop a running dedicated game server.
+
+### Request
+
+```http
+POST /place/{id}/{name}?/close
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField path="id" type="number" required>
+  Place asset ID
+</ParamField>
+
+<ParamField body="privateTicket" type="string">
+  Private server ticket (if applicable)
+</ParamField>
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+### Response
+
+Returns empty response on success.
+
+### Authorization
+
+User must be either:
+- The place owner, OR
+- Have permission level 4 or higher (moderator/admin)
+
+### Errors
+
+- **403 Forbidden**: "You do not have permission to close this server."
+- **404 Not Found**: Place doesn't exist
+- **500 Internal Server Error**: "Failed to close dedicated server"
+
+Source: `Site/src/routes/(main)/place/[id=asset]/[name]/+page.server.ts:155-169`
+
+---
+
+## Place Settings
+
+Manage place configuration. All settings endpoints require the user to be the place owner or have permission level 4+.
+
+### Get Place Settings
+
+```http
+GET /place/{id}/{name}/settings
+```
+
+<ParamField path="id" type="number" required>
+  Place asset ID
+</ParamField>
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+### Response
+
+Returns full place configuration including forms for each settings category.
+
+<ResponseField name="name" type="string">
+  Place name
+</ResponseField>
+
+<ResponseField name="description" type="object">
+  Place description
+</ResponseField>
+
+<ResponseField name="dedicated" type="boolean">
+  Whether this uses a dedicated server
+</ResponseField>
+
+<ResponseField name="serverAddress" type="string">
+  Dedicated server IP address
+</ResponseField>
+
+<ResponseField name="serverPort" type="number">
+  Dedicated server port
+</ResponseField>
+
+<ResponseField name="maxPlayers" type="number">
+  Maximum player count
+</ResponseField>
+
+<ResponseField name="privateServer" type="boolean">
+  Privacy setting
+</ResponseField>
+
+<ResponseField name="privateTicket" type="string">
+  Private access ticket
+</ResponseField>
+
+<ResponseField name="serverTicket" type="string">
+  Server authentication ticket
+</ResponseField>
+
+Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts:69-90`
+
+### Update View Settings
+
+```http
+POST /place/{id}/{name}/settings?/view
+Content-Type: multipart/form-data
+```
+
+<ParamField body="name" type="string" required>
+  Place name (max 100 characters)
+</ParamField>
+
+<ParamField body="description" type="string">
+  Place description (max 1000 characters)
+</ParamField>
+
+<ParamField body="icon" type="File">
+  Place icon image (max 1MB, resized to 270x270, converted to AVIF)
+</ParamField>
+
+**Response:** "View settings updated successfully!"
+
+**Errors:**
+- **icon**: "Icon must be less than 1MB in size"
+
+Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts:103-134`
+
+### Update Network Settings
+
+```http
+POST /place/{id}/{name}/settings?/network
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField body="dedicated" type="boolean" required>
+  Enable dedicated server mode
+</ParamField>
+
+<ParamField body="serverAddress" type="string">
+  Dedicated server IP address
+</ParamField>
+
+<ParamField body="serverPort" type="number">
+  Dedicated server port
+</ParamField>
+
+<ParamField body="maxPlayers" type="number" required>
+  Maximum concurrent players
+</ParamField>
+
+**Response:** "Network settings updated successfully!"
+
+Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts:144-151`
+
+### Update Privacy Settings
+
+```http
+POST /place/{id}/{name}/settings?/privacy
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField body="privateServer" type="boolean" required>
+  Enable private server mode
+</ParamField>
+
+**Response:** "Privacy settings updated successfully!"
+
+Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts:152-161`
+
+### Regenerate Server Ticket
+
+```http
+POST /place/{id}/{name}/settings?/ticket
+Content-Type: application/x-www-form-urlencoded
+```
+
+Generates a new server authentication ticket.
+
+**Response:** "Regenerated!"
+
+Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts:135-143`
+
+### Regenerate Private Link
+
+```http
+POST /place/{id}/{name}/settings?/privatelink
+Content-Type: application/x-www-form-urlencoded
+```
+
+Generates a new private server access ticket.
+
+**Response:** "Regenerated!"
+
+Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts:162-170`
+
+### Upload Place Data
+
+```http
+POST /place/{id}/{name}/settings?/data
+Content-Type: multipart/form-data
+```
+
+<ParamField body="file" type="File" required>
+  Place data file (max 100MB)
+</ParamField>
+
+Uploads the place game file to `../data/places/{id}`.
+
+**Response:** "Place data updated successfully!"
+
+**Errors:**
+- **file**: "File must be less than 100MB in size"
+
+Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts:171-188`

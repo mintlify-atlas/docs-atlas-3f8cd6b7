@@ -1,0 +1,544 @@
+---
+title: Database Deployment
+description: Deploy and manage SurrealDB for Mercury Core with backup strategies
+---
+
+Mercury Core uses SurrealDB v3.0.1 as its primary database, running in a Docker container with persistent storage.
+
+## Database Architecture
+
+Mercury Core's database stack consists of:
+
+- **SurrealDB v3.0.1** - Multi-model database with SQL-like query language
+- **SurrealKV** - Embedded storage engine for high performance
+- **Persistent Volume** - Host-mounted storage at `./data/surreal`
+
+## Docker Configuration
+
+The database service is defined in `compose.yml`:
+
+```yaml
+database:
+    build: ./Database
+    ports:
+        - 8000:8000
+    restart: unless-stopped
+    volumes:
+        - ./data/surreal:/database
+    command:
+        - start
+        - -u=root
+        - -p=root
+        - surrealkv://database
+```
+
+### Database Dockerfile
+
+The `Database/Dockerfile` is minimal:
+
+```dockerfile
+FROM surrealdb/surrealdb:v3.0.1
+
+EXPOSE 8000
+```
+
+### Storage Configuration
+
+- **Storage Engine**: SurrealKV (`surrealkv://database`)
+- **Data Directory**: `/database` (mounted from `./data/surreal` on host)
+- **Port**: 8000 (HTTP and WebSocket)
+- **Credentials**: root/root (default - change for production)
+
+<Warning>
+The default credentials (root/root) are hardcoded in compose.yml. Change these immediately for production deployments.
+</Warning>
+
+## Initial Setup
+
+When starting Mercury Core for the first time:
+
+```bash
+# Start database service
+docker compose up -d database
+
+# Check database logs
+docker compose logs -f database
+
+# Verify database is running
+curl http://localhost:8000/health
+```
+
+The database will automatically:
+1. Create the `/database` directory in the container
+2. Initialize the SurrealKV storage engine
+3. Listen on port 8000 for connections
+
+## Data Persistence
+
+All database data is stored in the host directory `./data/surreal`:
+
+```bash
+# View data directory structure
+ls -lah ./data/surreal
+
+# Check disk usage
+du -sh ./data/surreal
+```
+
+### Volume Permissions
+
+Ensure proper permissions on the data directory:
+
+```bash
+# Set ownership (replace user:group with your values)
+sudo chown -R $(id -u):$(id -g) ./data/surreal
+
+# Set permissions
+chmod -R 755 ./data/surreal
+```
+
+## Changing Database Credentials
+
+For production deployments, change the default credentials:
+
+1. Edit `compose.yml`:
+
+```yaml
+database:
+    build: ./Database
+    ports:
+        - 8000:8000
+    restart: unless-stopped
+    volumes:
+        - ./data/surreal:/database
+    command:
+        - start
+        - -u=admin
+        - -p=your_secure_password_here
+        - surrealkv://database
+```
+
+2. Update your application configuration to use the new credentials.
+
+3. Restart the database:
+
+```bash
+docker compose up -d --force-recreate database
+```
+
+<Warning>
+Changing credentials on an existing database requires updating all services that connect to it. Coordinate this change carefully to avoid service disruption.
+</Warning>
+
+## Backup Strategies
+
+### Manual Backup
+
+Create a backup by copying the data directory:
+
+```bash
+# Stop database to ensure consistency
+docker compose stop database
+
+# Create backup with timestamp
+sudo tar -czf backup-surreal-$(date +%Y%m%d-%H%M%S).tar.gz ./data/surreal
+
+# Restart database
+docker compose start database
+```
+
+### Hot Backup (Database Running)
+
+For minimal downtime, use SurrealDB export:
+
+```bash
+# Export database to SQL file
+docker compose exec database surreal export \
+  --conn http://localhost:8000 \
+  --user root \
+  --pass root \
+  --ns production \
+  --db mercury \
+  backup.sql
+
+# Copy from container to host
+docker compose cp database:/backup.sql ./backups/backup-$(date +%Y%m%d-%H%M%S).sql
+```
+
+### Automated Backup Script
+
+Create a backup script at `scripts/backup-database.sh`:
+
+```bash
+#!/bin/bash
+set -e
+
+BACKUP_DIR="./backups/database"
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+BACKUP_FILE="$BACKUP_DIR/surreal-$TIMESTAMP.tar.gz"
+
+# Create backup directory
+mkdir -p "$BACKUP_DIR"
+
+# Stop database
+echo "Stopping database..."
+docker compose stop database
+
+# Create backup
+echo "Creating backup: $BACKUP_FILE"
+sudo tar -czf "$BACKUP_FILE" ./data/surreal
+
+# Start database
+echo "Starting database..."
+docker compose start database
+
+# Remove backups older than 30 days
+find "$BACKUP_DIR" -name "surreal-*.tar.gz" -mtime +30 -delete
+
+echo "Backup completed: $BACKUP_FILE"
+```
+
+Make it executable and schedule with cron:
+
+```bash
+chmod +x scripts/backup-database.sh
+
+# Add to crontab (daily at 2 AM)
+crontab -e
+0 2 * * * /path/to/mercury-core/scripts/backup-database.sh >> /var/log/mercury-backup.log 2>&1
+```
+
+### Backup to Remote Storage
+
+Sync backups to remote storage:
+
+```bash
+# Using rsync to remote server
+rsync -avz ./backups/ user@backup-server:/backups/mercury-core/
+
+# Using rclone to cloud storage (S3, Google Drive, etc.)
+rclone sync ./backups/ remote:mercury-backups/
+```
+
+## Restore Procedures
+
+### Restore from Filesystem Backup
+
+```bash
+# Stop all services
+docker compose down
+
+# Backup current data (just in case)
+sudo mv ./data/surreal ./data/surreal.old
+
+# Extract backup
+sudo tar -xzf backup-surreal-20260303-020000.tar.gz -C ./
+
+# Restore ownership
+sudo chown -R $(id -u):$(id -g) ./data/surreal
+
+# Start services
+docker compose up -d
+```
+
+### Restore from SQL Export
+
+```bash
+# Start database if not running
+docker compose up -d database
+
+# Copy backup to container
+docker compose cp ./backups/backup-20260303-020000.sql database:/backup.sql
+
+# Import database
+docker compose exec database surreal import \
+  --conn http://localhost:8000 \
+  --user root \
+  --pass root \
+  --ns production \
+  --db mercury \
+  /backup.sql
+
+# Verify import
+docker compose logs database
+```
+
+### Disaster Recovery
+
+If the database is corrupted:
+
+```bash
+# Stop all services
+docker compose down
+
+# Remove corrupted data
+sudo rm -rf ./data/surreal
+
+# Restore from latest backup
+sudo tar -xzf ./backups/latest-backup.tar.gz -C ./
+
+# Fix permissions
+sudo chown -R $(id -u):$(id -g) ./data/surreal
+
+# Rebuild and start
+docker compose up -d --build
+```
+
+<Warning>
+Always test your backup and restore procedures before a real disaster occurs. Verify backups are valid and can be restored successfully.
+</Warning>
+
+## Database Access
+
+### Using SurrealDB CLI
+
+Access the database shell:
+
+```bash
+# Enter database container
+docker compose exec database sh
+
+# Connect to database
+surreal sql --conn http://localhost:8000 --user root --pass root
+```
+
+### Using HTTP API
+
+Query via HTTP REST API:
+
+```bash
+# Execute SQL query
+curl -X POST http://localhost:8000/sql \
+  -H "Content-Type: application/json" \
+  -u root:root \
+  -d "SELECT * FROM users LIMIT 10;"
+```
+
+### Using WebSocket
+
+Connect via WebSocket at `ws://localhost:8000/rpc`.
+
+## Monitoring Database Health
+
+### Check Service Status
+
+```bash
+# Container status
+docker compose ps database
+
+# Resource usage
+docker stats database
+
+# Recent logs
+docker compose logs --tail=50 database
+```
+
+### Monitor Disk Usage
+
+```bash
+# Database directory size
+du -sh ./data/surreal
+
+# Watch disk usage in real-time
+watch -n 5 "du -sh ./data/surreal"
+```
+
+### Health Check Endpoint
+
+```bash
+# Check if database is responsive
+curl http://localhost:8000/health
+
+# Expected response: 200 OK
+```
+
+## Performance Tuning
+
+### Container Resource Limits
+
+Limit database container resources in `compose.yml`:
+
+```yaml
+database:
+    build: ./Database
+    ports:
+        - 8000:8000
+    restart: unless-stopped
+    volumes:
+        - ./data/surreal:/database
+    command:
+        - start
+        - -u=root
+        - -p=root
+        - surrealkv://database
+    deploy:
+        resources:
+            limits:
+                cpus: '2.0'
+                memory: 2G
+            reservations:
+                cpus: '1.0'
+                memory: 1G
+```
+
+### Storage Optimization
+
+SurrealKV is optimized for performance but monitor disk I/O:
+
+```bash
+# Monitor I/O stats
+sudo iotop -o
+
+# Check disk latency
+sudo iostat -x 1
+```
+
+For high-performance deployments, mount the database volume on SSD/NVMe storage.
+
+## Security Hardening
+
+### Restrict Database Port
+
+In production, don't expose port 8000 to the internet:
+
+```yaml
+database:
+    build: ./Database
+    ports:
+        - 127.0.0.1:8000:8000  # Bind to localhost only
+    # ... rest of config
+```
+
+### Use Docker Networks
+
+Create an isolated network for database access:
+
+```yaml
+networks:
+  backend:
+    internal: true
+
+services:
+  database:
+    networks:
+      - backend
+    # Don't expose ports to host
+    expose:
+      - 8000
+  
+  site:
+    networks:
+      - backend
+```
+
+### Enable TLS
+
+For encrypted connections, configure SurrealDB with TLS certificates:
+
+```yaml
+database:
+    command:
+        - start
+        - -u=root
+        - -p=root
+        - --web-crt=/certs/server.crt
+        - --web-key=/certs/server.key
+        - surrealkv://database
+    volumes:
+        - ./data/surreal:/database
+        - ./certs:/certs:ro
+```
+
+### Regular Updates
+
+Stay updated with security patches:
+
+```bash
+# Check current version
+docker compose exec database surreal version
+
+# Update to latest patch version
+# Edit Database/Dockerfile to change version
+# FROM surrealdb/surrealdb:v3.0.2
+
+# Rebuild
+docker compose build database
+docker compose up -d database
+```
+
+<Warning>
+Before upgrading SurrealDB versions, always create a full backup and test the upgrade in a staging environment first.
+</Warning>
+
+## Troubleshooting
+
+### Database Won't Start
+
+Check logs for errors:
+
+```bash
+docker compose logs database
+```
+
+Common issues:
+- **Permission denied**: Fix with `sudo chown -R $(id -u):$(id -g) ./data/surreal`
+- **Port already in use**: Another service is using port 8000
+- **Corrupted data**: Restore from backup
+
+### Connection Timeouts
+
+Verify database is accessible:
+
+```bash
+# From host
+curl http://localhost:8000/health
+
+# From site container
+docker compose exec site curl http://database:8000/health
+```
+
+### Data Not Persisting
+
+Ensure volume mount is correct:
+
+```bash
+# Inspect container mounts
+docker inspect mercury-core-database-1 | grep -A 10 Mounts
+
+# Verify data directory
+ls -lah ./data/surreal
+```
+
+### Out of Disk Space
+
+Clean up old data:
+
+```bash
+# Check disk usage
+df -h
+
+# Find large files in database
+sudo du -sh ./data/surreal/*
+
+# Clean Docker system
+docker system prune -a
+```
+
+## Migration from Other Databases
+
+If migrating from another database system:
+
+1. Export data from source database to SQL or JSON
+2. Transform to SurrealDB schema format
+3. Import using `surreal import` command
+4. Verify data integrity
+5. Update application connection strings
+
+Consult the [SurrealDB documentation](https://surrealdb.com/docs) for migration guides.
+
+## Next Steps
+
+- Review [Security Considerations](/deployment/security) for database hardening
+- Set up [Docker Deployment](/deployment/docker) for the complete stack
+- Configure [Caddy Reverse Proxy](/deployment/caddy) for secure external access
+- Implement monitoring and alerting for database health

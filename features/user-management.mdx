@@ -1,0 +1,208 @@
+---
+title: User Management
+description: User registration, authentication, and account management in Mercury Core
+---
+
+Mercury Core provides a complete user management system with flexible registration options, secure authentication, and comprehensive account settings.
+
+## Registration
+
+Mercury Core supports multiple registration workflows depending on your configuration.
+
+### Initial Account Creation
+
+When you first deploy Mercury Core with no existing users, the registration page automatically switches to initial account mode:
+
+- The first user receives permission level 5 (highest admin privileges)
+- No registration key or email is required
+- Only username and password are needed
+- This account has full administrative access to create registration keys for additional users
+
+### Standard Registration
+
+After the initial account is created, new users follow the standard registration flow:
+
+<CardGroup cols={2}>
+  <Card title="Username" icon="user">
+    3-21 characters long. Supports letters (A-Z), numbers (0-9), and underscores. Must be unique across the platform.
+  </Card>
+  
+  <Card title="Password" icon="lock">
+    Minimum 16 characters for security. Hashed using Bun's password hashing (scrypt-based) before storage.
+  </Card>
+  
+  <Card title="Email" icon="envelope">
+    Optional based on configuration. Required when `Registration.Emails` is enabled in your config.
+  </Card>
+  
+  <Card title="Registration Key" icon="key">
+    Optional based on configuration. Required when `Registration.Keys.Enabled` is true in your config.
+  </Card>
+</CardGroup>
+
+### Registration Configuration
+
+Configure registration behavior in `Assets/schema.ts`:
+
+```typescript
+Registration: {
+  Keys: {
+    Enabled: true,  // Require registration keys
+    Prefix: "MC-"   // Key prefix for identification
+  },
+  Emails: true      // Require email addresses
+}
+```
+
+**Source:** `Site/src/routes/(plain)/register/+page.server.ts:36`
+
+## Authentication
+
+### Login Process
+
+Mercury Core uses secure cookie-based session authentication:
+
+1. User submits username and password
+2. Password is verified against hashed password using Bun's password verification
+3. Session token is created and stored in a secure cookie
+4. Cookie is used for subsequent authenticated requests
+
+**Security Features:**
+- Passwords are hashed using scrypt algorithm
+- Generic error messages prevent username enumeration attacks
+- Sessions can be invalidated individually or all at once
+
+**Source:** `Site/src/routes/(plain)/login/+page.server.ts:38-44`
+
+### Password Recovery
+
+Mercury Core includes a password recovery system:
+
+- Users can request a recovery code via email (when email is configured)
+- Recovery codes are time-limited
+- Codes are sent through the configured SMTP server
+
+## Account Settings
+
+Users can manage their accounts through the Settings page (`/settings`).
+
+<Tabs>
+  <Tab title="Profile">
+    ### Profile Settings
+    
+    Users can customize their profile:
+    
+    - **Description:** Personal bio (max 1000 characters)
+    - **Theme:** Choose from available themes configured by the administrator
+    - Text content is filtered for profanity based on server configuration
+    
+    **Source:** `Site/src/routes/(main)/settings/+page.server.ts:42-56`
+  </Tab>
+  
+  <Tab title="Security">
+    ### Security Settings
+    
+    **Change Password:**
+    - Requires current password for verification
+    - New password must be different from current password
+    - New password must match confirmation
+    - All existing sessions remain valid after password change
+    
+    **Session Management:**
+    - Invalidate all sessions across all devices
+    - Requires password confirmation
+    - Logs user out immediately and redirects to login page
+    - Useful if account security is compromised
+    
+    **Source:** `Site/src/routes/(main)/settings/+page.server.ts:57-106`
+  </Tab>
+  
+  <Tab title="Styling">
+    ### Custom Styling
+    
+    Advanced users can add custom CSS to personalize their experience:
+    
+    - Maximum 10,000 characters
+    - CSS is applied to the user's own view only
+    - Does not affect other users
+    - Can be cleared by setting to undefined
+    
+    **Source:** `Site/src/routes/(main)/settings/+page.server.ts:107-118`
+  </Tab>
+  
+  <Tab title="Account">
+    ### Account Information
+    
+    View and manage account details:
+    
+    - Username (cannot be changed after registration)
+    - Email address (if configured)
+    - Account creation date
+    - Permission level
+  </Tab>
+</Tabs>
+
+## Avatar Customization
+
+Mercury Core includes a character customization system accessible at `/character`.
+
+### Body Colors
+
+Users can paint individual body parts with brick colors:
+
+- Head
+- Left Arm
+- Right Arm  
+- Left Leg
+- Right Leg
+- Torso
+
+Color changes trigger an automatic avatar render request to update the user's appearance.
+
+**Source:** `Site/src/routes/(main)/character/+page.server.ts:88-108`
+
+### Wearing Assets
+
+Users can equip items from their inventory:
+
+<Accordion title="Equippable Asset Types">
+  - **Type 2:** Faces (one at a time)
+  - **Type 8:** Hats (maximum 3 simultaneously)
+  - **Type 11:** Shirts (one at a time)
+  - **Type 12:** Pants (one at a time)
+  - **Type 17:** Gear
+  - **Type 18:** T-Shirts (one at a time)
+  - **Type 19:** Heads (one at a time)
+</Accordion>
+
+**Equipping Rules:**
+- Single-equip items (faces, shirts, pants, t-shirts, heads) automatically unequip when a new item of the same type is equipped
+- Hats allow up to 3 simultaneous items
+- Only visible (approved) assets can be equipped
+- Avatar is automatically re-rendered after equip/unequip actions
+
+**Rate Limiting:** Equip/unequip actions are rate limited to 2 requests per time window to prevent render queue spam.
+
+**Source:** `Site/src/routes/(main)/character/+page.server.ts:117-137`
+
+## User Status
+
+Users have status indicators throughout the platform:
+
+- **Online:** Currently active
+- **Offline:** Not currently logged in
+- **Playing:** In a game server
+
+Status is automatically updated based on user activity and game server connections.
+
+## Permission Levels
+
+Mercury Core uses a numeric permission level system:
+
+- **Level 1:** Standard user
+- **Level 2:** Trusted user (reserved for future features)
+- **Level 3:** Moderator (access to admin panel)
+- **Level 4:** Administrator (full moderation capabilities)
+- **Level 5:** Super Administrator (full system access, can manage all users and settings)
+
+Permission levels control access to administrative features and moderation tools.

@@ -1,0 +1,149 @@
+---
+title: 'Avatar Rendering API'
+description: 'Avatar thumbnail and character rendering endpoints'
+icon: 'user'
+---
+
+## Get Avatar Thumbnail
+
+`GET /api/avatar/{username}`
+
+Retrieves or waits for a user's avatar thumbnail image (head or body shot).
+
+<ParamField path="username" type="string" required>
+  The username to get avatar for. Append `-body` suffix for full body shot instead of head shot.
+</ParamField>
+
+<ParamField query="wait" type="boolean">
+  If present, waits for the avatar image to be created or updated before responding
+</ParamField>
+
+### Shot Types
+
+The endpoint supports two shot types based on the username parameter:
+
+<ResponseField name="Head Shot" type="default">
+  Default behavior - returns head thumbnail from `{userId}-head.png`
+</ResponseField>
+
+<ResponseField name="Body Shot" type="-body suffix">
+  Append `-body` to username - returns full body thumbnail from `{userId}-body.png`
+</ResponseField>
+
+### Response
+
+Returns a PNG image file. If the avatar doesn't exist, returns a placeholder image (`static/dots.png`).
+
+### Wait Mode
+
+When the `wait` parameter is present:
+- If file doesn't exist: waits for it to be created
+- If file exists: waits for it to be modified
+- Uses filesystem watching to detect changes
+- Returns immediately if watching fails
+
+### Example Requests
+
+```bash
+# Get head thumbnail
+curl "http://mercury.local/api/avatar/Player1"
+
+# Get body thumbnail
+curl "http://mercury.local/api/avatar/Player1-body"
+
+# Wait for avatar update
+curl "http://mercury.local/api/avatar/Player1?wait"
+```
+
+### Storage Location
+
+Avatar images are stored at:
+- Head shots: `../data/avatars/{userId}-head.png`
+- Body shots: `../data/avatars/{userId}-body.png`
+
+### Implementation
+
+Source: `api/avatar/[username]/+server.ts:5`
+
+---
+
+## Render Character (Base)
+
+`GET /api/render/character`
+
+Returns base body colors XML for character rendering. Used as a foundation for avatar rendering.
+
+### Response
+
+Returns XML with all body colors set to value `1`:
+
+```xml
+<roblox>
+  <Item class="BodyColors">
+    <Properties>
+      <int name="HeadColor">1</int>
+      <int name="LeftArmColor">1</int>
+      <int name="LeftLegColor">1</int>
+      <int name="RightArmColor">1</int>
+      <int name="RightLegColor">1</int>
+      <int name="TorsoColor">1</int>
+    </Properties>
+  </Item>
+</roblox>
+```
+
+### Example Request
+
+```bash
+curl "http://mercury.local/api/render/character"
+```
+
+### Implementation
+
+Source: `api/render/character/+server.ts:1`
+
+---
+
+## Render Character with Asset
+
+`GET /api/render/characterasset`
+
+Returns a character appearance URL that combines base body colors with a specific asset. Used for generating avatar renders with clothing or accessories.
+
+<ParamField query="id" type="number" required>
+  Asset ID to apply to the character
+</ParamField>
+
+### Response
+
+Returns a plain text string with semicolon-delimited URLs:
+
+```
+http://mercury.local/api/render/character;http://mercury.local/asset?id={assetId}
+```
+
+<ResponseField name="Cache-Control" type="string">
+  Set to `no-cache`
+</ResponseField>
+
+### URL Format
+
+The response contains two parts:
+1. Base character render endpoint
+2. Asset endpoint for the specified asset ID
+
+### Example Request
+
+```bash
+curl "http://mercury.local/api/render/characterasset?id=123456"
+```
+
+### Example Response
+
+```
+http://mercury.local/api/render/character;http://mercury.local/asset?id=123456
+```
+
+### Implementation
+
+Source: `api/render/characterasset/+server.ts:5`

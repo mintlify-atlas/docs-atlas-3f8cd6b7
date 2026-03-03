@@ -1,0 +1,249 @@
+---
+title: Transactions
+description: Create transactions and retrieve transaction history
+---
+
+## Create Transaction
+
+```
+POST /transact
+```
+
+Create a new transaction to transfer currency between users.
+
+### Request Body
+
+<ParamField body="From" type="string" required>
+  The user sending the currency
+</ParamField>
+
+<ParamField body="To" type="string" required>
+  The user receiving the currency
+</ParamField>
+
+<ParamField body="Amount" type="uint64" required>
+  Amount to transfer in micro-units (must be greater than 0)
+</ParamField>
+
+<ParamField body="Note" type="string" required>
+  Description or note for the transaction
+</ParamField>
+
+<ParamField body="Returns" type="object">
+  Optional asset returns mapping (asset ID to quantity)
+</ParamField>
+
+### Response
+
+Returns `200 OK` with no body on success.
+
+### Example Request
+
+```bash
+curl -X POST http://localhost:2009/transact \
+  -H "Content-Type: application/json" \
+  -d '{
+    "From": "alice",
+    "To": "bob",
+    "Amount": 5000000,
+    "Note": "Payment for services"
+  }'
+```
+
+This transfers 5.000000 units from alice to bob.
+
+### Validation Errors
+
+The endpoint validates all transactions before execution:
+
+**Status Code**: `400 Bad Request`
+
+#### Insufficient Balance
+
+```json
+{
+  "From": "alice",
+  "To": "bob",
+  "Amount": 999999999,
+  "Note": "Too much money"
+}
+```
+
+Error: `insufficient balance: balance was X.XXXXXX unit, at least Y.YYYYYY unit is required`
+
+#### Missing Required Fields
+
+```json
+{
+  "From": "alice",
+  "To": "bob",
+  "Amount": 5000000
+}
+```
+
+Error: `transaction must have a note`
+
+#### Zero Amount Without Returns
+
+```json
+{
+  "From": "alice",
+  "To": "bob",
+  "Amount": 0,
+  "Note": "Empty transaction"
+}
+```
+
+Error: `transaction must have an amount or returns`
+
+#### Circular Transaction
+
+```json
+{
+  "From": "alice",
+  "To": "alice",
+  "Amount": 5000000,
+  "Note": "Self transfer"
+}
+```
+
+Error: `circular transaction: alice -> alice`
+
+#### Empty Sender or Recipient
+
+```json
+{
+  "From": "",
+  "To": "bob",
+  "Amount": 5000000,
+  "Note": "No sender"
+}
+```
+
+Error: `transaction must have a sender`
+
+---
+
+## Get User Transactions
+
+```
+GET /transactions/{id}
+```
+
+Retrieve the last 100 transactions involving a specific user.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The user identifier to query transactions for
+</ParamField>
+
+### Response
+
+Returns a JSON array of transaction objects (up to 100 most recent).
+
+<ResponseField name="transactions" type="array">
+  Array of transaction objects involving the user
+</ResponseField>
+
+<ResponseField name="Type" type="string">
+  Transaction type: `"Transaction"`, `"Mint"`, or `"Burn"`
+</ResponseField>
+
+<ResponseField name="Id" type="string">
+  Unique 15-character transaction identifier
+</ResponseField>
+
+<ResponseField name="Time" type="uint64">
+  Unix timestamp in milliseconds
+</ResponseField>
+
+<ResponseField name="From" type="string">
+  Sender user ID (not present in Mint transactions)
+</ResponseField>
+
+<ResponseField name="To" type="string">
+  Recipient user ID (not present in Burn transactions)
+</ResponseField>
+
+<ResponseField name="Amount" type="uint64">
+  Amount in micro-units
+</ResponseField>
+
+<ResponseField name="Note" type="string">
+  Transaction description
+</ResponseField>
+
+<ResponseField name="Returns" type="object">
+  Asset returns if any (optional)
+</ResponseField>
+
+<ResponseField name="Link" type="string">
+  Reference link (only in Burn transactions)
+</ResponseField>
+
+### Example Request
+
+```bash
+curl http://localhost:2009/transactions/alice
+```
+
+### Example Response
+
+```json
+[
+  {
+    "Type": "Transaction",
+    "Id": "abc123def456789",
+    "Time": 1709481600000,
+    "From": "alice",
+    "To": "bob",
+    "Amount": 5000000,
+    "Note": "Payment for services",
+    "Returns": null
+  },
+  {
+    "Type": "Mint",
+    "Id": "xyz789ghi012345",
+    "Time": 1709395200000,
+    "To": "alice",
+    "Amount": 10000000,
+    "Note": "Stipend"
+  },
+  {
+    "Type": "Transaction",
+    "Id": "mno345pqr678901",
+    "Time": 1709308800000,
+    "From": "charlie",
+    "To": "alice",
+    "Amount": 2500000,
+    "Note": "Refund",
+    "Returns": null
+  }
+]
+```
+
+### Empty History
+
+If a user has no transaction history:
+
+```bash
+curl http://localhost:2009/transactions/newuser
+```
+
+```json
+[]
+```
+
+### Error Responses
+
+**Status Code**: `500 Internal Server Error`
+
+If there's an error reading the ledger or encoding the response, a 500 error is returned with the error message.
+
+## Notes
+
+- Transactions are returned in reverse chronological order (most recent first)
+- Maximum of 100 transactions are returned per request
+- The endpoint returns all transaction types where the user is either sender or recipient
+- Stipend transactions appear as Mint transactions with Note: "Stipend"

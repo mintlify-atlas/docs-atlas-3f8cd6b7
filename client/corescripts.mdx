@@ -1,0 +1,250 @@
+---
+title: Corescripts and Loadscripts
+description: Understanding corescripts and loadscripts in Mercury Core
+---
+
+Corescripts and loadscripts are the Lua scripts that provide core functionality to Roblox clients connecting to Mercury Core.
+
+## What are Loadscripts?
+
+Loadscripts are the initial scripts sent to the client when launching a game in different modes. They set up the game environment and establish connections to the server.
+
+### Types of Loadscripts
+
+Mercury Core supports four types of loadscripts:
+
+#### Visit Script (`visit.lua`)
+
+Served when visiting a place without joining a multiplayer session.
+
+**Endpoint:** `/game/visit`
+
+**Template Variables:**
+- `_PLACE_ID` - Replaced with `"0"`
+
+**Example:**
+```lua
+local placeId = _PLACE_ID
+-- Initialize solo visit mode
+```
+
+#### Join Script (`join.lua`)
+
+Served when joining a multiplayer game session.
+
+**Endpoint:** `/game/join?ticket={clientTicket}`
+
+**Template Variables:**
+- `_PLACE_ID` - The place ID being joined
+- `_SERVER_ADDRESS` - Game server IP/domain
+- `_SERVER_PORT` - Game server port number
+- `_USER_ID` - Random user ID (0-1 billion)
+- `_USERNAME` - Player's username
+- `_MEMBERSHIP_TYPE` - Membership level enum value
+- `_CHAR_APPEARANCE` - Character appearance fetch URL
+- `_PING_URL` - Client presence ping endpoint
+
+**Example:**
+```lua
+local placeId = _PLACE_ID
+local serverAddress = _SERVER_ADDRESS
+local serverPort = _SERVER_PORT
+local userId = _USER_ID
+local username = _USERNAME
+local membershipType = _MEMBERSHIP_TYPE
+local charAppearance = _CHAR_APPEARANCE
+local pingUrl = _PING_URL
+
+-- Connect to game server and initialize player
+```
+
+#### Studio Script (`studio.lua`)
+
+Served when launching Roblox Studio.
+
+**Endpoint:** `/game/studio`
+
+**Template Variables:** None
+
+**Example:**
+```lua
+-- Initialize Studio environment
+```
+
+#### Host Script (`host.lua`)
+
+Served when hosting a game server (self-hosted mode only).
+
+**Endpoint:** `/game/host?ticket={serverTicket}`
+
+**Template Variables:**
+- `_BASE_URL` - Your Mercury Core domain
+- `_MAP_LOCATION` - Optional map location (e.g., `rbxasset://maps/map.rbxl`)
+- `_SERVER_PORT` - Server port number
+- `_SERVER_PRESENCE_URL` - Server presence ping endpoint
+
+**Example:**
+```lua
+local baseUrl = _BASE_URL
+local mapLocation = _MAP_LOCATION
+local serverPort = _SERVER_PORT
+local presenceUrl = _SERVER_PRESENCE_URL
+
+-- Initialize game server
+```
+
+<Warning>
+  The host script is only served if `config.Gameservers.Hosting` is not set to `"Dedicated"`. If dedicated servers are enabled, this endpoint returns a 400 error.
+</Warning>
+
+## What are Corescripts?
+
+Corescripts are privileged Lua scripts that provide core game functionality. These are hardcoded into the client by asset ID and are loaded automatically.
+
+Common corescripts include:
+
+- **Chat systems** - In-game chat functionality
+- **Player lists** - Displaying connected players
+- **Health/UI** - Player health bars and core UI
+- **Character scripts** - Character controller and animations
+- **Camera scripts** - Camera controls and modes
+
+## Script Storage
+
+Loadscripts and corescripts are stored in different locations:
+
+```
+data/
+└── server/
+    ├── loadscripts/
+    │   ├── visit.lua
+    │   ├── join.lua
+    │   ├── studio.lua
+    │   └── host.lua
+    └── assets/
+        ├── 1               # Corescript with ID 1
+        ├── 2               # Corescript with ID 2
+        └── ...             # More corescripts
+```
+
+## Script Signing
+
+All loadscripts are automatically signed before being sent to the client using the `SignData` function:
+
+```typescript
+export async function SignData(data: string, assetId?: number) {
+  const signed = `${assetId ? `--rbxassetid%${assetId}%` : ""}\n${data}`
+  const sig = createSign("sha1")
+    .update(signed)
+    .sign(await Bun.file("../data/PrivateKey.pem").text(), "base64")
+  return `--rbxsig%${sig}%${signed}`
+}
+```
+
+The signature format is:
+```lua
+--rbxsig%{base64_signature}%--rbxassetid%{asset_id}%
+{script_content}
+```
+
+For loadscripts without an asset ID:
+```lua
+--rbxsig%{base64_signature}%
+{script_content}
+```
+
+## Writing Custom Scripts
+
+<Warning>
+  If you're using original corescripts provided with the client instead of custom ones, expect to encounter issues requiring heavy modification or complete rewrites. This requires significant internal client knowledge and maintenance effort.
+</Warning>
+
+### Best Practices
+
+1. **Keep scripts lightweight** - Minimize code size and complexity
+2. **Use minification** - Remove comments and whitespace for production
+3. **Modularize code** - Use a module system to organize functionality
+4. **Reduce duplication** - Share common code between scripts
+5. **Handle errors gracefully** - Add error handling for network failures
+6. **Test thoroughly** - Test with your specific client version
+
+### Template Variable Replacement
+
+When writing loadscripts, use template variables that Mercury Core will replace:
+
+```lua
+-- join.lua example
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+player.Name = _USERNAME
+player.UserId = _USER_ID
+player.MembershipType = Enum.MembershipType[_MEMBERSHIP_TYPE]
+
+-- Connect to server
+local success, error = pcall(function()
+  game:HttpGet(_PING_URL)
+end)
+```
+
+Mercury Core performs string replacement before signing:
+
+```typescript
+const script = (await scriptFile.text())
+  .replaceAll("_PLACE_ID", place.id.toString())
+  .replaceAll("_SERVER_ADDRESS", `"${serverAddress}"`)
+  .replaceAll("_SERVER_PORT", serverPort.toString())
+  .replaceAll("_USER_ID", Math.floor(Math.random() * 1e9).toString())
+  .replaceAll("_USERNAME", `"${user.username}"`)
+  .replaceAll("_MEMBERSHIP_TYPE", membershipType(user.permissionLevel))
+  .replaceAll("_CHAR_APPEARANCE", `"${charApp}"`)
+  .replaceAll("_PING_URL", `"${pingUrl}")
+```
+
+## Example Scripts
+
+For reference implementations of corescripts and loadscripts, see:
+
+- [tp-link-extender/2013](https://github.com/tp-link-extender/2013) - Example scripts for 2013-era clients
+- Original Mercury 2 scripts in the same repository
+
+## Debugging Scripts
+
+### Server-Side Debugging
+
+1. Check Mercury Core logs for script requests:
+   ```
+   Requested asset 123
+   Serving privileged 123
+   ```
+
+2. Verify script signing is working:
+   ```typescript
+   const signedScript = await SignData(script)
+   console.log(signedScript.substring(0, 100)) // Check signature prefix
+   ```
+
+3. Test template replacement:
+   ```typescript
+   console.log(script) // Before replacement
+   const processed = script.replaceAll("_USERNAME", "TestUser")
+   console.log(processed) // After replacement
+   ```
+
+### Client-Side Debugging
+
+1. Enable verbose client logging
+2. Check for signature verification errors
+3. Verify script execution errors in client logs
+4. Test network connectivity to endpoints
+
+## Script Security
+
+<Warning>
+  Never expose your private key (`data/PrivateKey.pem`). If compromised, attackers could sign malicious scripts that clients would trust.
+</Warning>
+
+- Store the private key securely with restricted file permissions
+- Never commit the key to version control (already in `.gitignore`)
+- Regenerate keys if compromise is suspected
+- Patch clients with the new public key after regeneration

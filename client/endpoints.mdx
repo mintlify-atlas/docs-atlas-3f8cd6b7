@@ -1,0 +1,351 @@
+---
+title: Client-Facing API Endpoints
+description: API endpoints that Roblox clients use to communicate with Mercury Core
+---
+
+Mercury Core exposes several endpoints that Roblox clients use to fetch assets, report presence, and retrieve game data.
+
+## Asset Endpoints
+
+### Get Asset
+
+**GET** `/asset?id={assetId}`
+
+**Legacy URLs:** `/Asset`, `/Asset/`, `/Asset/Default.ashx`
+
+Retrieves an asset by ID from privileged assets, user assets, or the Roblox Open Cloud API.
+
+**Parameters:**
+- `id` (required) - Asset ID to fetch
+
+**Response:** Binary asset data with MD5 hash filename
+
+**Headers:**
+```
+Content-Type: binary/octet-stream
+Content-Disposition: attachment; filename="{md5_hash}"
+```
+
+**Asset Loading Priority:**
+1. Privileged assets from `data/server/assets/{id}`
+2. User-uploaded assets from `data/assets/{id}` (if visible/pending)
+3. Roblox Open Cloud API (cached in `data/assetcache/{id}`)
+
+**URL Substitution:**
+
+For XML-based assets (scripts, models), `roblox.com/asset` references are automatically replaced with your domain. Binary assets (images, meshes) are not modified.
+
+**Example:**
+```bash
+curl https://mercs.dev/asset?id=123
+```
+
+### Get Script State
+
+**GET** `/asset/getscriptstate`
+
+**Legacy URL:** `/Asset/GetScriptState.ashx`
+
+Returns the script state for the client.
+
+**Response:** `0 0 1 0`
+
+### Character Fetch
+
+**GET** `/asset/characterfetch/{username}`
+
+Retrieves character appearance data for a user.
+
+**Parameters:**
+- `username` (required) - Username to fetch appearance for
+
+**Response:** Semicolon-separated list of asset URLs
+
+**Format:**
+```
+http://mercs.dev/asset/bodycolours/{username}?;http://mercs.dev/asset?id={asset1};http://mercs.dev/asset?id={asset2}
+```
+
+**Headers:**
+```
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: text/plain
+```
+
+**Example:**
+```bash
+curl https://mercs.dev/asset/characterfetch/Player1
+```
+
+### Body Colours
+
+**GET** `/asset/bodycolours/{username}`
+
+Retrieves body color data for a user as an XML document.
+
+**Parameters:**
+- `username` (required) - Username to fetch body colors for
+
+**Response:** ROBLOX XML with BodyColors instance
+
+## Game Endpoints
+
+### Visit
+
+**GET** `/game/visit`
+
+**Legacy URL:** `/Game/Visit.ashx`
+
+Serves the signed visit loadscript.
+
+**Response:** Signed Lua script with `_PLACE_ID` set to `"0"`
+
+### Join
+
+**GET** `/game/join?ticket={clientTicket}&privateServer={privateTicket}`
+
+**Legacy URL:** `/Game/Join.ashx`
+
+Serves the signed join loadscript for multiplayer games.
+
+**Parameters:**
+- `ticket` (required) - Client session ticket
+- `privateServer` (optional) - Private server ticket
+
+**Response:** Signed Lua script with template variables replaced
+
+**Template Variables:**
+- `_PLACE_ID` - Place being joined
+- `_SERVER_ADDRESS` - Game server address
+- `_SERVER_PORT` - Game server port
+- `_USER_ID` - Random user ID
+- `_USERNAME` - Player username
+- `_MEMBERSHIP_TYPE` - Membership type enum
+- `_CHAR_APPEARANCE` - Character appearance URL
+- `_PING_URL` - Client presence endpoint
+
+**Errors:**
+- `400 Invalid Game Session` - Invalid or expired ticket
+- `400 Invalid Private Server` - Invalid private server ticket
+
+### Studio
+
+**GET** `/game/studio`
+
+**Legacy URL:** `/Game/Studio.ashx`
+
+Serves the signed studio loadscript.
+
+**Response:** Signed Lua script for Studio mode
+
+### Host
+
+**GET** `/game/host?ticket={serverTicket}&autopilot={base64MapPath}`
+
+**Legacy URL:** `/Game/Host`
+
+Serves the signed host loadscript for self-hosted game servers.
+
+**Parameters:**
+- `ticket` (required) - Server session ticket
+- `autopilot` (optional) - Base64-encoded map path (must end in `.rbxl`)
+
+**Response:** Signed Lua script with template variables replaced
+
+**Template Variables:**
+- `_BASE_URL` - Your Mercury Core domain
+- `_MAP_LOCATION` - Map location or empty string
+- `_SERVER_PORT` - Server port
+- `_SERVER_PRESENCE_URL` - Server presence URL
+
+**Errors:**
+- `400 Selfhosted servers are not supported` - If dedicated-only mode is enabled
+- `400 Invalid Server ticket` - Invalid or expired ticket
+
+<Warning>
+  This endpoint is only available if `config.Gameservers.Hosting` is set to `"Both"` or `"Selfhosted"`. It returns a 400 error if set to `"Dedicated"`.
+</Warning>
+
+### Machine Configuration
+
+**GET** `/game/machineconfiguration`
+
+**Legacy URL:** `/Game/MachineConfiguration.ashx`
+
+Returns machine configuration data.
+
+**Response:** `OK`
+
+### Client Presence
+
+**POST/GET** `/game/clientpresence?ticket={clientTicket}`
+
+**Legacy URL:** `/Game/ClientPresence`
+
+Client ping endpoint to report that the player is still connected.
+
+**Parameters:**
+- `ticket` (required) - Client session ticket
+
+**Headers Required:**
+```
+User-Agent: Roblox/WinInet
+```
+
+**Response:** `OK`
+
+**Headers:**
+```
+Pragma: no-cache
+Cache-Control: no-cache
+```
+
+**Errors:**
+- `400 Good one` - Invalid User-Agent header
+- `400 Invalid Request` - Missing ticket parameter
+- `400 Ticket not found` - Ticket doesn't exist in database
+
+### Server Presence
+
+**POST/GET** `/game/serverpresence?ticket={serverTicket}`
+
+**Legacy URL:** `/Game/ServerPresence`
+
+Game server ping endpoint to report that the server is still running.
+
+**Parameters:**
+- `ticket` (required) - Server session ticket
+
+**Headers Required:**
+```
+User-Agent: Roblox/WinInet
+```
+
+**Response:** `OK`
+
+**Headers:**
+```
+Pragma: no-cache
+Cache-Control: no-cache
+```
+
+**Errors:**
+- `400 Good one` - Invalid User-Agent header
+- `400 Invalid Request` - Missing ticket parameter
+
+### Game Server
+
+**GET** `/game/gameserver`
+
+**Legacy URL:** `/game/gameserver.ashx`
+
+Game server management endpoint.
+
+## Tool Endpoints
+
+### Insert Asset
+
+**GET** `/game/tools/insertasset`
+
+**Legacy URL:** `/Game/Tools/InsertAsset.ashx`
+
+Redirects to an external service for asset insertion (currently redirects to pizzaboxer's sets).
+
+**Response:** `302 Redirect` to `https://sets.pizzaboxer.xyz/Game/Tools/InsertAsset.ashx{query}`
+
+### Thumbnail Asset
+
+**GET** `/game/tools/thumbnailasset?aid={assetId}&wd={width}&ht={height}`
+
+**Legacy URL:** `/Game/Tools/ThumbnailAsset.ashx`
+
+Retrieves asset thumbnails from Roblox's thumbnail API with caching.
+
+**Parameters:**
+- `aid` (required) - Asset ID
+- `wd` (required) - Width in pixels
+- `ht` (required) - Height in pixels
+
+**Response:** `302 Redirect` to thumbnail image URL
+
+**Caching:**
+
+Thumbnail URLs are cached in the database (`thumbnailCache` table) to avoid repeated API calls.
+
+**Errors:**
+- `404 Asset not found` - Missing or invalid parameters
+- `400 Invalid asset` - Asset doesn't exist or can't be thumbnailed
+
+## Settings Endpoints
+
+### Client Shared Settings
+
+**GET** `/api/clientsharedsettings`
+
+**Legacy URL:** `/Setting/QuietGet/ClientSharedSettings/*`
+
+Returns client shared settings configuration.
+
+### Client App Settings
+
+**GET** `/api/clientappsettings`
+
+**Legacy URL:** `/Setting/QuietGet/ClientAppSettings/*`
+
+Returns client application settings (FFlags, DFlags, etc.).
+
+**Response:** JSON object with application settings
+
+**Source:** `Site/src/routes/(rbxclient)/(render)/v1/settings/application/settings.json`
+
+**Example Response:**
+```json
+{
+  "applicationSettings": {
+    "DFFlagDebugEnableRemoteProfiling2": "True",
+    "FFlagEnableCoreScriptBacktraceReporting": "True",
+    "FIntMaxClients": "1023"
+  }
+}
+```
+
+## Media Upload Endpoints
+
+### Upload Screenshot
+
+**POST** `/studio/uploadmedia/screenshot`
+
+**Legacy URL:** `/UploadMedia/PostImage.aspx`
+
+Handles screenshot uploads from Studio.
+
+## Authentication
+
+Most client endpoints require specific authentication:
+
+- **Tickets** - Session-based tickets for join/host operations
+- **User-Agent** - Presence endpoints require `User-Agent: Roblox/WinInet`
+- **Open Cloud Key** - Asset fetching may use Open Cloud API with `OPEN_CLOUD_KEY`
+
+## Error Handling
+
+Common error responses:
+
+- `400 Bad Request` - Invalid parameters or missing required data
+- `404 Not Found` - Asset or resource doesn't exist
+- `500 Internal Server Error` - Server-side error (logged to console)
+
+## Caching Behavior
+
+Endpoints set appropriate cache headers:
+
+**No-cache endpoints:**
+- Character fetch
+- Body colours
+- Presence endpoints
+
+**Cached endpoints:**
+- Assets (cached by client)
+- Open Cloud assets (cached in `data/assetcache/`)
+- Thumbnails (cached in database)

@@ -1,0 +1,431 @@
+---
+title: 'Game & Join API'
+description: 'Game server hosting, joining, and presence endpoints for Roblox clients'
+icon: 'gamepad'
+---
+
+## Join Game
+
+`GET /game/join`
+
+Generates a signed Lua script to join a game server. Handles both authenticated game sessions and default local testing.
+
+<ParamField query="ticket" type="string">
+  Client session ticket for authenticated joins (from playing record)
+</ParamField>
+
+<ParamField query="privateServer" type="string">
+  Optional private server ticket for joining private servers
+</ParamField>
+
+### Response
+
+Returns a signed Lua script that:
+- Configures the client with server connection details
+- Sets user information and membership type
+- Loads character appearance
+- Establishes presence ping URL
+
+<ResponseField name="Script Variables" type="object">
+  <Expandable title="Variables">
+    <ResponseField name="_PLACE_ID" type="number">
+      The place ID to join (0 for local testing)
+    </ResponseField>
+    <ResponseField name="_SERVER_ADDRESS" type="string">
+      Server hostname or IP address
+    </ResponseField>
+    <ResponseField name="_SERVER_PORT" type="number">
+      Server port number
+    </ResponseField>
+    <ResponseField name="_USER_ID" type="number">
+      Random user ID for the session
+    </ResponseField>
+    <ResponseField name="_USERNAME" type="string">
+      Player's username
+    </ResponseField>
+    <ResponseField name="_MEMBERSHIP_TYPE" type="string">
+      Player's membership level based on permission level
+    </ResponseField>
+    <ResponseField name="_CHAR_APPEARANCE" type="string">
+      URL to character appearance data
+    </ResponseField>
+    <ResponseField name="_PING_URL" type="string">
+      URL for client presence updates
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Default Behavior (No Ticket)
+
+When called without a ticket parameter, returns a local testing configuration:
+- Place ID: 0
+- Server: localhost:53640
+- Username: Player1
+- No character appearance or ping URL
+
+### Authenticated Join
+
+With a valid ticket:
+1. Validates private server ticket if provided
+2. Retrieves and invalidates the game session
+3. Determines server address based on hosting configuration (dedicated vs self-hosted)
+4. Generates character appearance URL
+5. Creates presence ping URL
+
+### Server Hosting Modes
+
+The endpoint respects the `Gameservers.Hosting` configuration:
+- **Dedicated**: Always uses OrbiterPublicDomain with port based on place ID
+- **Selfhosted**: Uses place's configured serverAddress and serverPort
+- **Both**: Respects the place's dedicated flag
+
+### Example Request
+
+```bash
+# Local testing
+curl "http://mercury.local/game/join"
+
+# Authenticated join
+curl "http://mercury.local/game/join?ticket=abc123"
+
+# Private server join
+curl "http://mercury.local/game/join?ticket=abc123&privateServer=xyz789"
+```
+
+### Implementation
+
+Source: `(rbxclient)/game/join/+server.ts:38`
+
+---
+
+## Host Game Server
+
+`GET /game/host`
+
+Generates a signed Lua script to start a self-hosted game server. Requires a server ticket.
+
+<ParamField query="ticket" type="string" required>
+  Server ticket for the place being hosted
+</ParamField>
+
+<ParamField query="autopilot" type="string">
+  Base64-encoded map filename (must end in .rbxl)
+</ParamField>
+
+### Response
+
+Returns a signed Lua script configured for server hosting:
+
+<ResponseField name="Script Variables" type="object">
+  <Expandable title="Variables">
+    <ResponseField name="_BASE_URL" type="string">
+      Mercury domain for API calls
+    </ResponseField>
+    <ResponseField name="_MAP_LOCATION" type="string">
+      Map file path (rbxasset://maps/{filename} or empty)
+    </ResponseField>
+    <ResponseField name="_SERVER_PORT" type="number">
+      Port number for the server (derived from place ID)
+    </ResponseField>
+    <ResponseField name="_SERVER_PRESENCE_URL" type="string">
+      URL for server presence heartbeats
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Autopilot Maps
+
+The `autopilot` parameter allows loading custom maps:
+1. Value must be base64-encoded
+2. Decoded value must end with `.rbxl`
+3. Map is loaded from `rbxasset://maps/{filename}`
+
+<Warning>
+  This endpoint returns an error if `Gameservers.Hosting` is set to "Dedicated"
+</Warning>
+
+### Example Request
+
+```bash
+# Basic server hosting
+curl "http://mercury.local/game/host?ticket=server123"
+
+# With custom map
+curl "http://mercury.local/game/host?ticket=server123&autopilot=$(echo -n 'custommap.rbxl' | base64)"
+```
+
+### Implementation
+
+Source: `(rbxclient)/game/host/+server.ts:7`
+
+---
+
+## Serve Place File
+
+`GET /game/{id}`
+
+Serves the place file (RBXL) for dedicated game servers.
+
+<ParamField path="id" type="number" required>
+  The place ID to serve
+</ParamField>
+
+### Response
+
+Returns the binary place file from `../data/places/{id}`.
+
+### Validation
+
+1. Verifies the place exists in the database
+2. Checks if the place file exists on disk
+3. Returns 404 if either check fails
+
+<Note>
+  Bearer token authentication is temporarily disabled in the current implementation
+</Note>
+
+### Example Request
+
+```bash
+curl "http://mercury.local/game/123"
+```
+
+### Implementation
+
+Source: `(rbxclient)/game/[id=asset]/+server.ts:5`
+
+---
+
+## Serve Place Script (Dedicated)
+
+`GET /game/{id}/serve`
+
+Generates a signed hosting script for dedicated game servers.
+
+<ParamField path="id" type="number" required>
+  The place ID to host
+</ParamField>
+
+### Response
+
+Returns a signed Lua script with:
+- Base URL for API calls
+- Map location pointing to `/game/{id}`
+- Server port derived from place ID
+- Server presence URL with server ticket
+
+<Warning>
+  Returns 400 error if `Gameservers.Hosting` is set to "Selfhosted"
+</Warning>
+
+### Example Request
+
+```bash
+curl "http://mercury.local/game/123/serve"
+```
+
+### Implementation
+
+Source: `(rbxclient)/game/[id=asset]/serve/+server.ts:14`
+
+---
+
+## Visit (Studio)
+
+`GET /game/visit`
+
+Generates a signed Lua script for Roblox Studio visits.
+
+### Response
+
+Returns a signed visit script with place ID set to 0.
+
+### Example Request
+
+```bash
+curl "http://mercury.local/game/visit"
+```
+
+### Implementation
+
+Source: `(rbxclient)/game/visit/+server.ts:3`
+
+---
+
+## Studio Mode
+
+`GET /game/studio`
+
+Generates a signed Lua script for Roblox Studio mode.
+
+### Response
+
+Returns a signed studio script for launching Studio.
+
+### Example Request
+
+```bash
+curl "http://mercury.local/game/studio"
+```
+
+### Implementation
+
+Source: `(rbxclient)/game/studio/+server.ts:3`
+
+---
+
+## Client Presence
+
+`GET /game/clientpresence`
+
+Receives heartbeat pings from connected clients to track active sessions.
+
+<ParamField query="ticket" type="string" required>
+  The playing session ticket
+</ParamField>
+
+### Validation
+
+- Must be called with User-Agent: `Roblox/WinInet`
+- Ticket must exist in the playing records
+
+### Response
+
+Returns "OK" with no-cache headers.
+
+<ResponseField name="Cache-Control" type="string">
+  Set to `no-cache`
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -H "User-Agent: Roblox/WinInet" "http://mercury.local/game/clientpresence?ticket=abc123"
+```
+
+### Implementation
+
+Source: `(rbxclient)/game/clientpresence/+server.ts:5`
+
+---
+
+## Server Presence
+
+`GET /game/serverpresence`
+
+Receives heartbeat pings from game servers to track server health and uptime.
+
+<ParamField query="ticket" type="string" required>
+  The server ticket
+</ParamField>
+
+### Validation
+
+- Must be called with User-Agent: `Roblox/WinInet`
+- Ticket parameter is required
+
+### Response
+
+Returns "OK" with no-cache headers.
+
+<ResponseField name="Cache-Control" type="string">
+  Set to `no-cache`
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -H "User-Agent: Roblox/WinInet" "http://mercury.local/game/serverpresence?ticket=server123"
+```
+
+### Implementation
+
+Source: `(rbxclient)/game/serverpresence/+server.ts:5`
+
+---
+
+## Machine Configuration
+
+`GET /game/machineconfiguration`
+
+Returns machine configuration for the client. Currently returns a basic OK response.
+
+### Response
+
+Returns "OK" as plain text.
+
+### Example Request
+
+```bash
+curl "http://mercury.local/game/machineconfiguration"
+```
+
+### Implementation
+
+Source: `(rbxclient)/game/machineconfiguration/+server.ts:1`
+
+---
+
+## Insert Asset Tool
+
+`GET /game/tools/insertasset`
+
+Redirects to an external service for asset insertion in Studio.
+
+### Response
+
+Returns a 302 redirect to `https://sets.pizzaboxer.xyz/Game/Tools/InsertAsset.ashx` with query parameters preserved.
+
+### Example Request
+
+```bash
+curl "http://mercury.local/game/tools/insertasset?assetId=123"
+```
+
+### Implementation
+
+Source: `(rbxclient)/game/tools/insertasset/+server.ts:3`
+
+---
+
+## Thumbnail Asset Tool
+
+`GET /game/tools/thumbnailasset`
+
+Provides cached asset thumbnails for use in Studio and games (e.g., stamper tool).
+
+<ParamField query="aid" type="number" required>
+  Asset ID to get thumbnail for
+</ParamField>
+
+<ParamField query="wd" type="number" required>
+  Thumbnail width in pixels
+</ParamField>
+
+<ParamField query="ht" type="number" required>
+  Thumbnail height in pixels
+</ParamField>
+
+### Response
+
+Returns a 302 redirect to the thumbnail image URL. Thumbnails are:
+1. Checked in local cache first
+2. Fetched from Roblox thumbnails API if not cached
+3. Cached locally for future requests
+
+### Thumbnail API
+
+Uses Roblox's thumbnail API with parameters:
+- returnPolicy: Placeholder
+- format: Png
+- isCircular: false
+
+### Example Request
+
+```bash
+curl "http://mercury.local/game/tools/thumbnailasset?aid=123&wd=150&ht=150"
+```
+
+### Implementation
+
+Source: `(rbxclient)/game/tools/thumbnailasset/+server.ts:7`

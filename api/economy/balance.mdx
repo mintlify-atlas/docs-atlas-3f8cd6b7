@@ -1,0 +1,83 @@
+---
+title: Get Balance
+api: GET /balance/{id}
+description: Retrieve the current balance for a user
+---
+
+## Endpoint
+
+```
+GET /balance/{id}
+```
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The user identifier to query the balance for
+</ParamField>
+
+## Response
+
+Returns the user's current balance as a plain text `uint64` integer representing micro-units.
+
+<ResponseField name="balance" type="uint64">
+  The user's balance in micro-units (1 unit = 1,000,000 micro)
+</ResponseField>
+
+## Response Format
+
+The response is returned as plain text, not JSON. The value represents the balance in micro-units.
+
+For example, a balance of `10000000` represents `10.000000 unit`.
+
+## Examples
+
+### Request
+
+```bash
+curl http://localhost:2009/balance/user123
+```
+
+### Response
+
+```
+10000000
+```
+
+This represents a balance of 10.000000 units.
+
+### Zero Balance
+
+If a user has never transacted, their balance will be `0`:
+
+```bash
+curl http://localhost:2009/balance/newuser
+```
+
+```
+0
+```
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message if the request fails
+</ResponseField>
+
+### Invalid User ID
+
+If the user ID format is invalid:
+
+**Status Code**: `400 Bad Request`
+
+```bash
+curl http://localhost:2009/balance/
+```
+
+Returns an error message describing the parsing failure.
+
+## Notes
+
+- Users who have never received currency will have a balance of `0`
+- Balances are stored in memory and loaded from the ledger on service startup
+- All balance modifications are immediately written to the persistent ledger file

@@ -1,0 +1,247 @@
+---
+title: Development Setup
+description: Set up a local development environment for Mercury Core
+---
+
+This guide will walk you through setting up Mercury Core for local development, allowing you to customize and extend the platform.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- Latest version of Bun
+- Latest version of Docker (optional, but recommended)
+- A modern web browser (Early 2024 onwards)
+- A code editor (Visual Studio Code recommended)
+
+<Note>
+If you don't have or can't install Docker, you can run the database and economy service manually. See the alternative setup section below.
+</Note>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone Mercury Core to your local machine:
+    
+    ```bash
+    git clone <repository-url>
+    cd mercury-core
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all project dependencies using Bun:
+    
+    ```bash
+    bun i
+    ```
+  </Step>
+
+  <Step title="Configure environment variables">
+    Copy the example environment file and modify it:
+    
+    ```bash
+    cp Site/.env.example Site/.env
+    ```
+    
+    Edit `Site/.env` to configure your environment variables:
+    
+    ```bash Site/.env
+    ORIGIN=https://mercs.dev
+    PORT=4443
+    BODY_SIZE_LIMIT=1G
+    EMAIL_PASSWORD=password
+    RCC_KEY=password
+    GAMESERVER_KEY=password
+    OPEN_CLOUD_KEY=whatever
+    ```
+    
+    <Note>
+    The password, port, and RCCService key may be changed as required for your setup.
+    </Note>
+  </Step>
+
+  <Step title="Start the database and economy service">
+    Use Docker Compose to start the required services:
+    
+    ```bash
+    docker compose up -d database economy
+    ```
+    
+    This starts:
+    - **Database** (SurrealDB) on port 8000
+    - **Economy service** on port 2009
+  </Step>
+
+  <Step title="Start the development server">
+    Navigate to the Site directory and start the dev server:
+    
+    ```bash
+    cd Site
+    bun dev
+    ```
+    
+    Navigate to the link shown in your terminal (remember not to use HTTPS for local development).
+  </Step>
+
+  <Step title="Create your first account">
+    Once the server is running, navigate to `/register` and create an account to get started.
+  </Step>
+</Steps>
+
+## Alternative Setup (Without Docker)
+
+If you can't install Docker, you can run the services manually:
+
+<Steps>
+  <Step title="Install SurrealDB">
+    [Download and install SurrealDB](https://surrealdb.com/install) for your platform.
+  </Step>
+
+  <Step title="Start the database">
+    In the repository's root directory, run:
+    
+    ```bash
+    surreal start -l trace -u=root -p=root file:./data/surreal
+    ```
+    
+    Keep this terminal window open or run it in the background.
+  </Step>
+
+  <Step title="Install Go">
+    [Download and install Go](https://go.dev/dl/) for your platform.
+  </Step>
+
+  <Step title="Start the economy service">
+    Navigate to the Economy directory and run:
+    
+    ```bash
+    cd Economy
+    go run .
+    ```
+    
+    Keep this terminal window open or run it in the background.
+  </Step>
+</Steps>
+
+## Development Workflow
+
+### Live Reloading
+
+Changes to your code will automatically be reflected in the browser when you save files. The Vite development server provides instant hot module replacement.
+
+<Warning>
+If you're using WSL2 and the repository is stored on the Windows drive, the server may not correctly reflect changes. Either move the repository to a WSL-managed folder, or add the following to the default export in `vite.config.ts`:
+
+```ts
+server: { watch: { usePolling: true } },
+```
+</Warning>
+
+### Inspector Tool
+
+While in the browser, press `Ctrl+I` to open the inspector, allowing you to select any element and view it in your editor.
+
+### Building for Production Preview
+
+To test a production build locally:
+
+<CodeGroup>
+```bash Separate commands
+bun run build
+bun preview
+```
+
+```bash Combined command
+bun buildview
+```
+</CodeGroup>
+
+## Available Scripts
+
+The following npm scripts are available in the `Site/` directory:
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `dev` | `bun dev` | Start development server |
+| `build` | `bun run build` | Build for production |
+| `preview` | `bun preview` | Preview production build |
+| `buildview` | `bun buildview` | Build and preview in one command |
+| `format` | `bun run format` | Format code with Biome |
+| `lint` | `bun run lint` | Lint code with Biome |
+| `check` | `bun run check` | Run Svelte type checking |
+| `check:watch` | `bun run check:watch` | Run type checking in watch mode |
+
+## Docker Services Configuration
+
+The `compose.yml` file defines three services:
+
+### Database Service
+
+```yaml
+database:
+  build: ./Database
+  ports:
+    - 8000:8000
+  restart: unless-stopped
+  volumes:
+    - ./data/surreal:/database
+  command:
+    - start
+    - -u=root
+    - -p=root
+    - surrealkv://database
+```
+
+### Economy Service
+
+```yaml
+economy:
+  build: ./Economy
+  ports:
+    - 2009:2009
+  restart: unless-stopped
+  volumes:
+    - ./data/economy:/data/economy
+```
+
+### Site Service (Optional)
+
+```yaml
+site:
+  build: .
+  ports:
+    - 4443:4443
+  restart: unless-stopped
+  depends_on:
+    - database
+    - economy
+```
+
+<Note>
+The site service is optional for development. You'll typically run `bun dev` directly instead of using the containerized version.
+</Note>
+
+## Recommended Editor Setup
+
+For the best development experience, we recommend:
+
+- **Visual Studio Code** or derivatives (Insiders, VSCodium)
+- **Mercury Core development extension pack** - Includes all necessary extensions
+
+The extension pack provides support for:
+- TypeScript
+- Svelte
+- Go
+- Code navigation and intellisense
+- Quality-of-life improvements
+
+## Next Steps
+
+Now that your development environment is set up:
+
+- Explore the codebase structure
+- Learn about [customization options](/configuration/mercury-core)
+- Understand the [architecture and services](/concepts/architecture)
+- Configure your platform in `mercury.core.ts`

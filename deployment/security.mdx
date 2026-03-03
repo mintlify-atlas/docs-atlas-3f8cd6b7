@@ -1,0 +1,680 @@
+---
+title: Security Considerations
+description: Security best practices and hardening guidelines for Mercury Core deployments
+---
+
+Securing your Mercury Core deployment is critical for protecting user data and maintaining service integrity. This guide covers essential security measures for production deployments.
+
+## Critical Security Items
+
+<Warning>
+Before deploying Mercury Core to production, you MUST complete these security tasks:
+
+1. Change all default passwords in environment variables
+2. Restrict database port access to localhost only
+3. Use strong authentication keys for all services
+4. Enable HTTPS with valid TLS certificates
+5. Configure firewall rules to limit exposed ports
+6. Set up regular automated backups
+</Warning>
+
+## Environment Variables Security
+
+### Default Credentials
+
+The `Site/.env.example` file contains default passwords that **must be changed**:
+
+```bash
+ORIGIN=https://mercs.dev
+PORT=4443
+BODY_SIZE_LIMIT=1G
+EMAIL_PASSWORD=password          # CHANGE THIS
+RCC_KEY=password                 # CHANGE THIS
+GAMESERVER_KEY=password          # CHANGE THIS
+OPEN_CLOUD_KEY=whatever          # CHANGE THIS
+```
+
+### Generating Strong Passwords
+
+Generate cryptographically secure passwords:
+
+```bash
+# Generate random 32-character password
+openssl rand -base64 32
+
+# Generate random hex string
+openssl rand -hex 24
+
+# Using /dev/urandom
+tr -dc 'A-Za-z0-9!@#$%^&*' < /dev/urandom | head -c 32
+```
+
+### Secure Production .env File
+
+Example production configuration:
+
+```bash
+ORIGIN=https://yourdomain.com
+PORT=4443
+BODY_SIZE_LIMIT=1G
+EMAIL_PASSWORD=Xy9#mK2$pL8@vN4qR7&jT1wZ5fH3
+RCC_KEY=aB8$dE2#gH6@kL9mP3qR7sT1vW4yZ5
+GAMESERVER_KEY=cD9#fG3$hJ7@lM1nP5rS8tV2wX6
+OPEN_CLOUD_KEY=eF1$gH5#jK9@mN3pQ7rT2uW6xY0
+```
+
+### File Permissions
+
+Protect your `.env` file from unauthorized access:
+
+```bash
+# Set restrictive permissions (owner read/write only)
+chmod 600 Site/.env
+
+# Verify permissions
+ls -l Site/.env
+# Should show: -rw------- (600)
+
+# Ensure proper ownership
+chown $(whoami):$(whoami) Site/.env
+```
+
+<Warning>
+Never commit `.env` files to version control. Ensure `.env` is listed in `.gitignore`.
+</Warning>
+
+## Database Security
+
+### Change Default Database Credentials
+
+The database service in `compose.yml` uses default credentials:
+
+```yaml
+# INSECURE DEFAULT - CHANGE THIS
+database:
+    command:
+        - start
+        - -u=root
+        - -p=root
+        - surrealkv://database
+```
+
+Update to secure credentials:
+
+```yaml
+database:
+    command:
+        - start
+        - -u=dbadmin
+        - -p=${DB_PASSWORD}  # Use environment variable
+        - surrealkv://database
+    environment:
+        - DB_PASSWORD=${DB_PASSWORD}
+```
+
+Store `DB_PASSWORD` in a `.env` file at the repository root:
+
+```bash
+DB_PASSWORD=your_secure_database_password_here
+```
+
+### Restrict Database Port Access
+
+By default, the database port is exposed to all interfaces. Restrict to localhost:
+
+```yaml
+database:
+    ports:
+        - 127.0.0.1:8000:8000  # Only accessible from host
+    # ... rest of config
+```
+
+Or remove port exposure entirely if only accessed via Docker network:
+
+```yaml
+database:
+    expose:
+        - 8000  # Accessible only from other containers
+    # Remove ports: directive
+```
+
+### Enable Database TLS
+
+For encrypted database connections:
+
+```yaml
+database:
+    command:
+        - start
+        - -u=dbadmin
+        - -p=${DB_PASSWORD}
+        - --web-crt=/certs/db.crt
+        - --web-key=/certs/db.key
+        - surrealkv://database
+    volumes:
+        - ./data/surreal:/database
+        - ./certs:/certs:ro
+```
+
+Generate self-signed certificates for internal use:
+
+```bash
+mkdir -p certs
+openssl req -x509 -newkey rsa:4096 -nodes \
+  -keyout certs/db.key \
+  -out certs/db.crt \
+  -days 365 \
+  -subj "/CN=mercury-database"
+chmod 600 certs/db.key
+```
+
+## Network Security
+
+### Firewall Configuration
+
+Configure UFW (Uncomplicated Firewall) to restrict access:
+
+```bash
+# Enable UFW
+sudo ufw enable
+
+# Allow SSH (critical - don't lock yourself out!)
+sudo ufw allow 22/tcp
+
+# Allow HTTP and HTTPS (for Caddy)
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# Deny all other incoming traffic
+sudo ufw default deny incoming
+
+# Allow all outgoing traffic
+sudo ufw default allow outgoing
+
+# Check status
+sudo ufw status verbose
+```
+
+<Warning>
+Always allow SSH (port 22) before enabling the firewall, or you may lock yourself out of the server.
+</Warning>
+
+### Block Direct Access to Application Ports
+
+Ensure backend services are not directly accessible:
+
+```bash
+# Deny direct access to application port
+sudo ufw deny 4443/tcp
+
+# Deny database port
+sudo ufw deny 8000/tcp
+
+# Deny economy service port
+sudo ufw deny 2009/tcp
+```
+
+Access should only be through Caddy reverse proxy on ports 80/443.
+
+### Docker Network Isolation
+
+Create isolated networks for service communication:
+
+```yaml
+networks:
+  frontend:
+    # Exposed to internet via Caddy
+  backend:
+    internal: true  # No external access
+
+services:
+  database:
+    networks:
+      - backend
+    # No ports exposed to host
+    
+  economy:
+    networks:
+      - backend
+    
+  site:
+    networks:
+      - frontend
+      - backend
+    
+  caddy:
+    networks:
+      - frontend
+    ports:
+      - 80:80
+      - 443:443
+```
+
+## TLS/SSL Configuration
+
+### Caddy Automatic HTTPS
+
+Caddy automatically obtains and renews certificates from Let's Encrypt. Ensure:
+
+1. Domain DNS points to your server
+2. Ports 80 and 443 are accessible
+3. Valid email configured for certificate notifications
+
+```caddy
+{
+    email admin@yourdomain.com
+}
+
+yourdomain.com {
+    # Caddy handles TLS automatically
+    # ... reverse_proxy config ...
+}
+```
+
+### Enforce HTTPS
+
+Caddy redirects HTTP to HTTPS by default. Verify with:
+
+```bash
+curl -I http://yourdomain.com
+# Should see: HTTP/1.1 308 Permanent Redirect
+# Location: https://yourdomain.com/
+```
+
+### TLS Version and Cipher Suites
+
+Configure strong TLS settings in Caddyfile:
+
+```caddy
+yourdomain.com {
+    tls {
+        protocols tls1.2 tls1.3
+        ciphers TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+    }
+    
+    # ... reverse_proxy config ...
+}
+```
+
+### HSTS (HTTP Strict Transport Security)
+
+```caddy
+yourdomain.com {
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    
+    # ... reverse_proxy config ...
+}
+```
+
+## Application Security Headers
+
+Add security headers in Caddy configuration:
+
+```caddy
+yourdomain.com {
+    header {
+        # Prevent XSS attacks
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        
+        # Content Security Policy
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+        
+        # Referrer policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        
+        # Permissions policy
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        
+        # HSTS
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+    
+    # ... rewrites and reverse_proxy ...
+}
+```
+
+## Container Security
+
+### Run Containers as Non-Root
+
+Modify Dockerfiles to use non-root users:
+
+```dockerfile
+# Site Dockerfile example
+FROM oven/bun AS release
+
+# Create non-root user
+RUN addgroup --system --gid 1001 mercury && \
+    adduser --system --uid 1001 mercury
+
+# ... copy files ...
+
+USER mercury
+ENTRYPOINT ["bun", "-b", "./build"]
+```
+
+### Limit Container Resources
+
+Prevent resource exhaustion attacks:
+
+```yaml
+services:
+  site:
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+  
+  database:
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+          
+  economy:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+```
+
+### Read-Only Root Filesystem
+
+For containers that don't need write access:
+
+```yaml
+services:
+  site:
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+```
+
+### Docker Security Scanning
+
+Scan images for vulnerabilities:
+
+```bash
+# Scan all images
+docker scout cves mercury-core-site
+docker scout cves mercury-core-database
+docker scout cves mercury-core-economy
+
+# Or use Trivy
+trivy image mercury-core-site:latest
+```
+
+## Access Control
+
+### SSH Hardening
+
+Secure SSH access to your server:
+
+```bash
+# Edit SSH config
+sudo nano /etc/ssh/sshd_config
+```
+
+Recommended settings:
+
+```
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+Port 22  # Consider changing to non-standard port
+AllowUsers your_username
+```
+
+Restart SSH:
+
+```bash
+sudo systemctl restart sshd
+```
+
+### Use SSH Keys Only
+
+Disable password authentication:
+
+```bash
+# Generate SSH key pair (on your local machine)
+ssh-keygen -t ed25519 -C "your_email@example.com"
+
+# Copy public key to server
+ssh-copy-id user@your-server
+
+# Test login
+ssh user@your-server
+
+# Disable password auth in /etc/ssh/sshd_config
+# PasswordAuthentication no
+```
+
+### Sudo Access Control
+
+Limit sudo access to specific commands:
+
+```bash
+# Edit sudoers file
+sudo visudo
+
+# Allow user to restart services without password
+username ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart caddy
+username ALL=(ALL) NOPASSWD: /usr/bin/docker compose
+```
+
+## Monitoring and Logging
+
+### Centralized Logging
+
+Configure Docker logging driver:
+
+```yaml
+services:
+  site:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+```
+
+### Monitor Failed Login Attempts
+
+Install and configure fail2ban:
+
+```bash
+sudo apt install fail2ban
+
+# Configure for SSH
+sudo nano /etc/fail2ban/jail.local
+```
+
+```ini
+[sshd]
+enabled = true
+port = 22
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 3600
+```
+
+```bash
+sudo systemctl enable fail2ban
+sudo systemctl start fail2ban
+```
+
+### Security Audit Logs
+
+Enable Docker events logging:
+
+```bash
+# Monitor Docker events
+docker events --filter 'type=container' --format '{{.Time}} {{.Action}} {{.Actor.Attributes.name}}'
+
+# Log to file
+docker events >> /var/log/docker-events.log &
+```
+
+### Application Logging
+
+Ensure application logs don't contain sensitive data:
+
+- Don't log passwords or API keys
+- Sanitize user input before logging
+- Use structured logging (JSON format)
+- Implement log rotation
+
+## Backup Security
+
+### Encrypt Backups
+
+Encrypt backup files before storing:
+
+```bash
+# Create encrypted backup
+tar -czf - ./data/surreal | openssl enc -aes-256-cbc -pbkdf2 -out backup-encrypted.tar.gz.enc
+
+# Decrypt and restore
+openssl enc -d -aes-256-cbc -pbkdf2 -in backup-encrypted.tar.gz.enc | tar -xzf -
+```
+
+### Secure Backup Storage
+
+- Store backups on separate physical server
+- Use encrypted cloud storage (S3 with SSE, encrypted Google Drive)
+- Implement access controls on backup storage
+- Regularly test backup restoration
+
+### Backup Access Control
+
+```bash
+# Restrict backup directory permissions
+chmod 700 ./backups
+chown root:root ./backups
+
+# Individual backup files
+chmod 600 ./backups/*
+```
+
+## Security Updates
+
+### System Updates
+
+Keep system packages up to date:
+
+```bash
+# Update package list
+sudo apt update
+
+# Upgrade packages
+sudo apt upgrade -y
+
+# Enable automatic security updates
+sudo apt install unattended-upgrades
+sudo dpkg-reconfigure --priority=low unattended-upgrades
+```
+
+### Docker Image Updates
+
+Regularly update base images:
+
+```bash
+# Pull latest base images
+docker pull oven/bun:latest
+docker pull surrealdb/surrealdb:v3.0.1
+docker pull golang:latest
+
+# Rebuild containers
+docker compose build --no-cache
+docker compose up -d
+```
+
+### Dependency Updates
+
+Keep application dependencies current:
+
+```bash
+# Update Bun dependencies
+cd Site
+bun update
+
+# Update Go dependencies
+cd Economy
+go get -u ./...
+go mod tidy
+```
+
+## Security Checklist
+
+Before deploying to production:
+
+- [ ] Changed all default passwords in `.env`
+- [ ] Changed database credentials in `compose.yml`
+- [ ] Restricted database port to localhost or Docker network
+- [ ] Configured firewall (UFW) to allow only necessary ports
+- [ ] Enabled HTTPS with valid TLS certificates
+- [ ] Added security headers to Caddy configuration
+- [ ] Set restrictive file permissions on `.env` (600)
+- [ ] Configured SSH key-based authentication
+- [ ] Disabled SSH password authentication
+- [ ] Disabled SSH root login
+- [ ] Installed and configured fail2ban
+- [ ] Set up automated backups
+- [ ] Encrypted backup storage
+- [ ] Tested backup restoration procedure
+- [ ] Enabled automatic security updates
+- [ ] Configured container resource limits
+- [ ] Implemented Docker network isolation
+- [ ] Added application logging
+- [ ] Set up log rotation
+- [ ] Scanned Docker images for vulnerabilities
+- [ ] Documented security procedures
+
+## Incident Response
+
+In case of security incident:
+
+1. **Isolate**: Disconnect affected services from network
+2. **Assess**: Review logs to determine scope of breach
+3. **Contain**: Stop malicious activity
+4. **Eradicate**: Remove threat (patch vulnerabilities, remove malware)
+5. **Recover**: Restore from clean backups
+6. **Document**: Record timeline and actions taken
+7. **Improve**: Update security measures to prevent recurrence
+
+### Emergency Shutdown
+
+```bash
+# Immediately stop all services
+docker compose down
+
+# Block all network traffic
+sudo ufw default deny incoming
+sudo ufw default deny outgoing
+
+# Review logs
+sudo journalctl -xe
+docker compose logs
+```
+
+## Security Resources
+
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- [Docker Security Best Practices](https://docs.docker.com/engine/security/)
+- [SurrealDB Security](https://surrealdb.com/docs/security)
+- [Caddy Security](https://caddyserver.com/docs/security)
+- [CIS Docker Benchmark](https://www.cisecurity.org/benchmark/docker)
+
+<Warning>
+Security is an ongoing process, not a one-time task. Regularly review and update your security measures to protect against emerging threats.
+</Warning>

@@ -1,0 +1,378 @@
+---
+title: Users
+description: API endpoints for user profiles and account management
+---
+
+## Overview
+
+User endpoints handle profile viewing, social interactions, and account settings. All endpoints require authentication unless otherwise noted.
+
+## Get User Profile
+
+Retrieve detailed information about a user by username.
+
+### Request
+
+```http
+GET /user/{username}
+```
+
+<ParamField path="username" type="string" required>
+  The username of the user to retrieve
+</ParamField>
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+### Response
+
+<ResponseField name="username" type="string">
+  The user's display name
+</ResponseField>
+
+<ResponseField name="id" type="string">
+  User record ID
+</ResponseField>
+
+<ResponseField name="description" type="object">
+  User's profile description
+  - `id`: Description record ID
+  - `text`: Description text content
+  - `updated`: Last update timestamp
+</ResponseField>
+
+<ResponseField name="permissionLevel" type="number">
+  User permission level (1-5)
+</ResponseField>
+
+<ResponseField name="followerCount" type="number">
+  Number of followers
+</ResponseField>
+
+<ResponseField name="followingCount" type="number">
+  Number of users being followed
+</ResponseField>
+
+<ResponseField name="friendCount" type="number">
+  Number of friends
+</ResponseField>
+
+<ResponseField name="follower" type="boolean">
+  True if the current user follows this user
+</ResponseField>
+
+<ResponseField name="following" type="boolean">
+  True if this user follows the current user
+</ResponseField>
+
+<ResponseField name="friends" type="boolean">
+  True if users are friends
+</ResponseField>
+
+<ResponseField name="incomingRequest" type="boolean">
+  True if this user has sent a friend request to the current user
+</ResponseField>
+
+<ResponseField name="outgoingRequest" type="boolean">
+  True if the current user has sent a friend request to this user
+</ResponseField>
+
+<ResponseField name="places" type="array">
+  Array of user's places/games:
+  - `id`: Place ID
+  - `name`: Place name
+  - `likeCount`: Number of likes
+  - `dislikeCount`: Number of dislikes
+  - `playerCount`: Current player count
+</ResponseField>
+
+<ResponseField name="posts" type="array">
+  User's posts:
+  - `id`: Post ID
+  - `created`: Creation timestamp
+  - `content`: Array of content versions
+  - `visibility`: Post visibility setting
+</ResponseField>
+
+<ResponseField name="groups" type="array">
+  Groups the user is a member of
+</ResponseField>
+
+<ResponseField name="groupsOwned" type="array">
+  Groups owned by the user
+</ResponseField>
+
+### Errors
+
+- **404 Not Found**: User does not exist
+- **302 Redirect**: Not authenticated (redirects to `/login`)
+
+Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:56-65`
+
+---
+
+## Update Profile Settings
+
+Update the current user's profile information.
+
+### Request
+
+```http
+POST /settings?/profile
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+<ParamField body="description" type="string">
+  Profile description (max 1000 characters)
+</ParamField>
+
+<ParamField body="theme" type="string" required>
+  Theme name from available themes in configuration
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  "Profile updated successfully!"
+</ResponseField>
+
+### Errors
+
+<ResponseField name="theme" type="string">
+  "must be a valid theme" - Invalid theme selection
+</ResponseField>
+
+Source: `Site/src/routes/(main)/settings/+page.server.ts:42-56`
+
+---
+
+## Change Password
+
+Update the current user's password.
+
+### Request
+
+```http
+POST /settings?/password
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+<ParamField body="cpassword" type="string" required>
+  Current password for verification
+</ParamField>
+
+<ParamField body="npassword" type="string" required>
+  New password (minimum 1 character)
+</ParamField>
+
+<ParamField body="cnpassword" type="string" required>
+  Confirm new password (must match npassword)
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  "Password updated successfully!"
+</ResponseField>
+
+### Validation Errors
+
+<ResponseField name="cpassword" type="string">
+  "Incorrect password" - Current password verification failed
+</ResponseField>
+
+<ResponseField name="cnpassword" type="string">
+  "Passwords do not match" - New password and confirmation don't match
+</ResponseField>
+
+<ResponseField name="npassword" type="string">
+  "New password cannot be the same as the current password"
+</ResponseField>
+
+Source: `Site/src/routes/(main)/settings/+page.server.ts:57-87`
+
+---
+
+## Update User Styling
+
+Set custom CSS for the user's profile.
+
+### Request
+
+```http
+POST /settings?/styling
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+<ParamField body="css" type="string">
+  Custom CSS (max 10,000 characters)
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  "Styling updated successfully!"
+</ResponseField>
+
+Source: `Site/src/routes/(main)/settings/+page.server.ts:107-118`
+
+---
+
+## Social Interactions
+
+Manage user relationships including following, friends, and friend requests.
+
+### Follow User
+
+```http
+POST /user/{username}?/follow
+```
+
+<ParamField path="username" type="string" required>
+  Username to follow
+</ParamField>
+
+Creates a follow relationship and sends a notification.
+
+Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:129-136`
+
+### Unfollow User
+
+```http
+POST /user/{username}?/unfollow
+```
+
+<ParamField path="username" type="string" required>
+  Username to unfollow
+</ParamField>
+
+Removes the follow relationship.
+
+Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:137-140`
+
+### Send Friend Request
+
+```http
+POST /user/{username}?/request
+```
+
+<ParamField path="username" type="string" required>
+  Username to send friend request to
+</ParamField>
+
+Creates a friend request notification. If the target user already sent a request, automatically accepts it.
+
+**Errors:**
+- **400 Bad Request**: "Already friends" - Users are already friends
+
+Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:145-165`
+
+### Cancel Friend Request
+
+```http
+POST /user/{username}?/cancel
+```
+
+<ParamField path="username" type="string" required>
+  Username of pending request to cancel
+</ParamField>
+
+Cancels an outgoing friend request.
+
+Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:167-170`
+
+### Accept Friend Request
+
+```http
+POST /user/{username}?/accept
+```
+
+<ParamField path="username" type="string" required>
+  Username to accept friend request from
+</ParamField>
+
+Accepts an incoming friend request and creates a bidirectional friendship.
+
+**Errors:**
+- **400 Bad Request**: "No friend request to accept"
+
+Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:175-182`
+
+### Decline Friend Request
+
+```http
+POST /user/{username}?/decline
+```
+
+<ParamField path="username" type="string" required>
+  Username to decline friend request from
+</ParamField>
+
+Declines an incoming friend request.
+
+Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:171-174`
+
+### Unfriend User
+
+```http
+POST /user/{username}?/unfriend
+```
+
+<ParamField path="username" type="string" required>
+  Username to unfriend
+</ParamField>
+
+Removes the friendship relationship.
+
+Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:141-144`
+
+---
+
+## Rerender Avatar (Admin)
+
+Request a re-render of a user's avatar. Requires administrator privileges.
+
+### Request
+
+```http
+POST /user/{username}?/rerender
+```
+
+<ParamField path="username" type="string" required>
+  Username to rerender avatar for
+</ParamField>
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie with permission level 5
+</ParamField>
+
+### Response
+
+<ResponseField name="avatarBody" type="string">
+  URL to updated body avatar with cache-busting parameter
+</ResponseField>
+
+<ResponseField name="avatar" type="string">
+  URL to updated avatar with cache-busting parameter
+</ResponseField>
+
+### Errors
+
+- **403 Forbidden**: Insufficient permissions
+- **404 Not Found**: User does not exist
+- **500 Internal Server Error**: "Failed to request render"
+
+Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:112-127`

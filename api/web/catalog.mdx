@@ -1,0 +1,392 @@
+---
+title: Catalog
+description: API endpoints for browsing and managing catalog assets
+---
+
+## Overview
+
+The catalog system manages in-game assets including clothing, models, and other items. Users can browse, purchase, and manage assets.
+
+## Browse Catalog
+
+Retrieve paginated catalog listings.
+
+### Request
+
+```http
+GET /catalog?page={page}
+```
+
+<ParamField query="page" type="number" default="1">
+  Page number for pagination
+</ParamField>
+
+### Response
+
+Returns an array of catalog assets.
+
+<ResponseField name="assets" type="array">
+  Array of asset objects:
+  - `id`: Asset ID
+  - `name`: Asset name
+  - `price`: Asset price in currency
+</ResponseField>
+
+<ResponseField name="pages" type="number">
+  Total number of pages
+</ResponseField>
+
+Source: `Site/src/routes/(main)/catalog/+page.server.ts:11-21`
+
+---
+
+## Search Catalog
+
+Search for assets by name or other criteria.
+
+### Request
+
+```http
+GET /catalog/search?q={query}&p={page}
+```
+
+<ParamField query="q" type="string" required>
+  Search query string
+</ParamField>
+
+<ParamField query="p" type="number" default="1">
+  Page number (minimum 1)
+</ParamField>
+
+### Response
+
+Returns JSON array of matching assets.
+
+```json
+[
+  {
+    "id": 123,
+    "name": "Cool Hat",
+    "price": 100
+  }
+]
+```
+
+<ResponseField name="id" type="number">
+  Asset ID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Asset name
+</ResponseField>
+
+<ResponseField name="price" type="number">
+  Asset price
+</ResponseField>
+
+Source: `Site/src/routes/(main)/catalog/search/+server.ts:6-13`
+
+---
+
+## Get Asset Details
+
+Retrieve detailed information about a specific catalog asset.
+
+### Request
+
+```http
+GET /catalog/{id}/{name}
+```
+
+<ParamField path="id" type="number" required>
+  Asset ID
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  URL-encoded asset name (for SEO-friendly URLs)
+</ParamField>
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string">
+  Asset record ID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Asset name
+</ResponseField>
+
+<ResponseField name="slug" type="string">
+  URL-safe encoded name
+</ResponseField>
+
+<ResponseField name="type" type="number">
+  Asset type ID:
+  - 8: Model
+  - 11: Clothing (Shirt)
+  - 12: Clothing (Pants)
+  - Other types as configured
+</ResponseField>
+
+<ResponseField name="description" type="object">
+  Asset description
+  - `text`: Description content
+  - `updated`: Last update timestamp
+</ResponseField>
+
+<ResponseField name="creator" type="BasicUser">
+  Asset creator information
+</ResponseField>
+
+<ResponseField name="isCreator" type="boolean">
+  Whether current user is the creator
+</ResponseField>
+
+<ResponseField name="created" type="Date">
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="forSale" type="boolean">
+  Whether asset is available for purchase
+</ResponseField>
+
+<ResponseField name="price" type="number">
+  Asset price in currency
+</ResponseField>
+
+<ResponseField name="sold" type="number">
+  Number of times sold
+</ResponseField>
+
+<ResponseField name="owned" type="boolean">
+  Whether current user owns this asset
+</ResponseField>
+
+<ResponseField name="visibility" type="string">
+  Asset visibility status:
+  - "Visible": Approved and public
+  - "Moderated": Moderated/hidden
+  - Other states as configured
+</ResponseField>
+
+<ResponseField name="comments" type="array">
+  Array of comments on this asset
+</ResponseField>
+
+<ResponseField name="balance" type="number">
+  Current user's currency balance
+</ResponseField>
+
+<ResponseField name="currentFee" type="number">
+  Transaction fee percentage
+</ResponseField>
+
+### Errors
+
+- **404 Not Found**: Asset doesn't exist
+- **302 Redirect**: Name mismatch (redirects to correct URL with slug)
+- **500 Internal Server Error**: Economy service connection failed
+
+Source: `Site/src/routes/(main)/catalog/[id=asset]/[name]/+page.server.ts:57-82`
+
+---
+
+## Purchase Asset
+
+Buy a catalog asset.
+
+### Request
+
+```http
+POST /catalog/{id}/{name}?/buy
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField path="id" type="number" required>
+  Asset ID to purchase
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Asset name
+</ParamField>
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+### Response
+
+Returns empty response on success. Creates ownership relationship and processes payment.
+
+### Implementation Details
+
+1. Validates asset exists and is for sale
+2. Checks user doesn't already own the asset
+3. Verifies asset visibility is "Visible"
+4. Processes currency transaction (if price > 0)
+5. Creates `ownsAsset` relationship in database
+6. Sends purchase notification to creator
+
+### Errors
+
+- **404 Not Found**: Asset doesn't exist
+- **400 Bad Request**: 
+  - "You already own this item"
+  - "This item hasn't been approved yet" (visibility not "Visible")
+  - "This item is not for sale"
+  - Insufficient funds (from economy service)
+
+Source: `Site/src/routes/(main)/catalog/[id=asset]/[name]/+page.server.ts:163-217`
+
+---
+
+## Comment on Asset
+
+Post a comment on a catalog asset.
+
+### Request
+
+```http
+POST /catalog/{id}/{name}?/comment
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField path="id" type="number" required>
+  Asset ID
+</ParamField>
+
+<ParamField body="content" type="string" required>
+  Comment text (1-1000 characters)
+</ParamField>
+
+<ParamField body="replyId" type="string">
+  Optional comment ID to reply to
+</ParamField>
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie
+</ParamField>
+
+### Response
+
+Returns empty response on success.
+
+### Rate Limiting
+
+Limited to 5 comments per IP address within the rate limit window.
+
+### Implementation Details
+
+1. Validates comment content
+2. Filters comment through content filter
+3. Creates comment record
+4. Sends notification to asset creator (if different from commenter)
+
+### Validation Errors
+
+<ResponseField name="content" type="string">
+  "Comment must have content" - Empty or whitespace-only content
+</ResponseField>
+
+### Errors
+
+- **404 Not Found**: Asset doesn't exist
+- **429 Too Many Requests**: Rate limit exceeded
+
+Source: `Site/src/routes/(main)/catalog/[id=asset]/[name]/+page.server.ts:123-162`
+
+---
+
+## Rerender Asset (Admin)
+
+Request a re-render of an asset's thumbnail. Requires administrator privileges.
+
+### Request
+
+```http
+POST /catalog/{id}/{name}?/rerender
+Content-Type: application/x-www-form-urlencoded
+```
+
+<ParamField path="id" type="number" required>
+  Asset ID to rerender
+</ParamField>
+
+<ParamField header="Cookie" type="string" required>
+  Valid session cookie with permission level 5
+</ParamField>
+
+### Response
+
+<ResponseField name="icon" type="string">
+  URL to updated icon with cache-busting parameter
+</ResponseField>
+
+### Supported Asset Types
+
+Only works for:
+- Type 8: Models
+- Type 11: Clothing (Shirt)
+- Type 12: Clothing (Pants)
+
+### Errors
+
+- **403 Forbidden**: Insufficient permissions
+- **400 Bad Request**: 
+  - "Can't rerender a moderated asset"
+  - "Can't rerender this type of asset" (unsupported type)
+- **404 Not Found**: Asset doesn't exist
+- **500 Internal Server Error**: "Failed to request render"
+
+Source: `Site/src/routes/(main)/catalog/[id=asset]/[name]/+page.server.ts:94-121`
+
+---
+
+## Asset Management
+
+Asset settings and management endpoints for asset creators.
+
+### Get Asset Settings
+
+```http
+GET /catalog/{id}/{name}/settings
+```
+
+Returns asset configuration page. Requires user to be asset creator or have permission level 4+.
+
+### Update Asset Settings
+
+Various settings endpoints similar to place settings. Asset creators can update:
+- Name and description
+- Pricing and sale status  
+- Visibility settings
+- Asset file/data
+
+Implementation details follow similar patterns to place settings endpoints.
+
+---
+
+## Notes
+
+### Currency System
+
+Asset purchases integrate with the Mercury economy service:
+- Transaction fee is applied to purchases
+- Funds are transferred from buyer to creator
+- Transaction history is logged
+- Balance checks prevent overspending
+
+### Content Filtering
+
+All user-submitted text (descriptions, comments) passes through a content filter before storage.
+
+### Asset Types
+
+Asset types determine rendering behavior and usage:
+- Models (8): 3D models that can be placed in games
+- Clothing (11, 12): Wearable items for avatars
+- Additional types may be configured per instance

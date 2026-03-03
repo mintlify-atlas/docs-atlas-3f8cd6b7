@@ -1,0 +1,419 @@
+---
+title: Production Setup
+description: Deploy Mercury Core to production with optimal configuration
+---
+
+This guide covers deploying Mercury Core to a production environment with proper security, performance optimization, and reliability.
+
+## Prerequisites
+
+Before deploying to production, ensure you have:
+
+- Latest version of Bun installed (expected as `bun`)
+- Latest version of Docker or another container manager (expected as `docker`)
+- Latest version of Caddy server (expected as `caddy`)
+- A terminal with access to your server
+- Server hardware (physical or virtual)
+
+## Deployment Steps
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone Mercury Core to your production server:
+    
+    ```bash
+    git clone <repository-url>
+    cd mercury-core
+    ```
+  </Step>
+
+  <Step title="Configure environment variables">
+    Copy and configure the environment file:
+    
+    ```bash
+    cp Site/.env.example Site/.env
+    ```
+    
+    Edit `Site/.env` with your production settings:
+    
+    ```bash Site/.env
+    ORIGIN=https://yourdomain.com
+    PORT=4443
+    BODY_SIZE_LIMIT=1G
+    EMAIL_PASSWORD=your-secure-password
+    RCC_KEY=your-secure-key
+    GAMESERVER_KEY=your-secure-key
+    OPEN_CLOUD_KEY=your-secure-key
+    ```
+    
+    <Warning>
+    Use strong, unique passwords and keys for production. Never commit your `.env` file to version control.
+    </Warning>
+  </Step>
+
+  <Step title="Start Caddy reverse proxy">
+    Start the Caddy server to handle HTTPS and routing:
+    
+    ```bash
+    caddy start
+    ```
+    
+    <Note>
+    If you're using Caddy with multiple configuration files, import the Caddyfile from the repository root into your main Caddyfile, then run `caddy start` and `caddy reload` from that location.
+    </Note>
+    
+    To reload Caddy configuration without restarting:
+    
+    ```bash
+    caddy reload
+    ```
+  </Step>
+
+  <Step title="Start services with Docker">
+    Launch the database and economy services:
+    
+    <CodeGroup>
+    ```bash Database and Economy only
+    docker compose up -d database economy
+    ```
+    
+    ```bash All services (including site)
+    docker compose up -d
+    ```
+    </CodeGroup>
+    
+    <Note>
+    If you want to run the site in Docker as well, use `docker compose up -d` to start all services. Otherwise, you'll run the site directly with Bun.
+    </Note>
+  </Step>
+
+  <Step title="Build for production">
+    Navigate to the Site directory and build:
+    
+    ```bash
+    cd Site
+    bun prod
+    ```
+    
+    This command installs production dependencies and builds the optimized site.
+  </Step>
+
+  <Step title="Start Mercury Core">
+    Start the production server:
+    
+    ```bash
+    bun ./build
+    ```
+    
+    <Warning>
+    Note: This is `bun ./build` (running the built application), not `bun build` (which would invoke the build script).
+    </Warning>
+  </Step>
+</Steps>
+
+## Running as a Background Process
+
+For production environments, you'll want Mercury Core to run continuously in the background. Several methods are available:
+
+### Option 1: PM2 (Recommended)
+
+```bash
+cd Site
+bun x pm2 start
+```
+
+Manage your PM2 processes:
+
+```bash
+# List running processes
+bun x pm2 list
+
+# View logs
+bun x pm2 logs
+
+# Restart the process
+bun x pm2 restart mercurycore
+
+# Stop the process
+bun x pm2 stop mercurycore
+```
+
+### Option 2: GNU Screen
+
+```bash
+# Create a new screen session
+screen -S mercury
+
+# Start Mercury Core
+cd Site
+bun ./build
+
+# Detach from screen: Ctrl+A, then D
+
+# Reattach to screen later
+screen -r mercury
+```
+
+### Option 3: Docker Container
+
+Run the entire site in a Docker container:
+
+```bash
+docker compose up -d
+```
+
+This starts all services including the site container, which is configured in the `compose.yml` file.
+
+### Option 4: Systemd Service
+
+Create a systemd service file for automatic startup and management:
+
+```ini /etc/systemd/system/mercury-core.service
+[Unit]
+Description=Mercury Core
+After=network.target
+
+[Service]
+Type=simple
+User=your-user
+WorkingDirectory=/path/to/mercury-core/Site
+ExecStart=/usr/bin/bun ./build
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start the service:
+
+```bash
+sudo systemctl enable mercury-core
+sudo systemctl start mercury-core
+sudo systemctl status mercury-core
+```
+
+## Docker Services in Production
+
+The production deployment uses three Docker services defined in `compose.yml`:
+
+### Database Service (SurrealDB)
+
+- **Port**: 8000
+- **Storage**: Persists to `./data/surreal`
+- **Credentials**: root/root (change in production!)
+- **Backend**: surrealkv
+
+### Economy Service
+
+- **Port**: 2009
+- **Storage**: Persists to `./data/economy`
+- **Language**: Go
+
+### Site Service (Optional)
+
+- **Port**: 4443
+- **Dependencies**: Waits for database and economy services
+- **Runtime**: Bun
+
+## Caddy Reverse Proxy
+
+Caddy provides several production benefits:
+
+- **Automatic HTTPS**: Obtains and renews TLS certificates automatically
+- **URL Rewriting**: Routes requests to appropriate endpoints
+- **Performance**: Efficient reverse proxy with modern defaults
+- **Configuration**: Simpler than Apache or nginx
+
+<Note>
+The Caddyfile in the repository root contains pre-configured routing for Mercury Core. Review and adjust it based on your domain and client integration needs.
+</Note>
+
+## Data Directory Management
+
+The `data/` directory contains all runtime data and should be carefully managed:
+
+- `data/assets` - Binary asset files (images, meshes)
+- `data/economy` - Transaction ledger
+- `data/icons` - Place icons
+- `data/surreal` - Database files
+- `data/thumbnails` - Asset thumbnails
+- `data/PrivateKey.pem` - Corescript signing key (if using client integration)
+
+### Backup Strategy
+
+<Warning>
+Regularly back up your data directory. Consider:
+- Mounting to an external volume
+- Automated backup scripts
+- Off-site backup storage
+- Regular backup testing
+</Warning>
+
+### External Volume Mounting
+
+For better data management and safety:
+
+```bash
+# Example: Mount external volume
+sudo mount /dev/sdb1 /path/to/mercury-core/data
+```
+
+Update your `compose.yml` to use external volumes:
+
+```yaml
+volumes:
+  - /mnt/external-storage/surreal:/database
+  - /mnt/external-storage/economy:/data/economy
+```
+
+## Security Considerations
+
+<Warning>
+**Critical Security Steps:**
+
+1. Change default database credentials (root/root)
+2. Use strong, unique passwords in `.env`
+3. Keep `.env` and `data/` directories private
+4. Regularly update dependencies
+5. Configure firewall rules appropriately
+6. Use HTTPS only (Caddy handles this automatically)
+7. Secure your private key (`data/PrivateKey.pem`)
+</Warning>
+
+## Performance Optimization
+
+### Production Build
+
+The `bun prod` command creates an optimized build:
+
+- Minified JavaScript and CSS
+- Optimized assets
+- Tree-shaking to remove unused code
+- Production-only dependencies
+
+### Resource Limits
+
+Configure body size limits in your `.env`:
+
+```bash
+BODY_SIZE_LIMIT=1G
+```
+
+Adjust based on your expected asset upload sizes.
+
+### Container Resources
+
+Limit Docker container resources if needed:
+
+```yaml
+services:
+  database:
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+```
+
+## Monitoring and Logs
+
+### Docker Logs
+
+```bash
+# View logs for all services
+docker compose logs
+
+# Follow logs in real-time
+docker compose logs -f
+
+# View logs for specific service
+docker compose logs database
+```
+
+### PM2 Logs
+
+```bash
+# View all logs
+bun x pm2 logs
+
+# View logs for specific process
+bun x pm2 logs mercurycore
+```
+
+## Updating Mercury Core
+
+To update your production deployment:
+
+<Steps>
+  <Step title="Pull latest changes">
+    ```bash
+    git pull origin main
+    ```
+  </Step>
+
+  <Step title="Update dependencies and rebuild">
+    ```bash
+    cd Site
+    bun prod
+    ```
+  </Step>
+
+  <Step title="Restart services">
+    <CodeGroup>
+    ```bash PM2
+    bun x pm2 restart mercurycore
+    ```
+    
+    ```bash Docker
+    docker compose restart
+    ```
+    
+    ```bash Systemd
+    sudo systemctl restart mercury-core
+    ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Service Won't Start
+
+Check service status:
+
+```bash
+# Docker services
+docker compose ps
+docker compose logs
+
+# PM2 processes
+bun x pm2 status
+bun x pm2 logs
+```
+
+### Port Already in Use
+
+Change the port in `Site/.env`:
+
+```bash
+PORT=5000
+```
+
+### Database Connection Issues
+
+Verify the database is running:
+
+```bash
+docker compose ps database
+curl http://localhost:8000/health
+```
+
+## Next Steps
+
+- Configure [customization settings](/configuration/mercury-core)
+- Set up [client integration](/client/overview)
+- Review [security best practices](/deployment/security)
+- Monitor your deployment with appropriate tools

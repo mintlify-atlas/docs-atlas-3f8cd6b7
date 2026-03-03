@@ -1,0 +1,414 @@
+---
+title: Economy System
+description: Virtual currency, transactions, and stipend system in Mercury Core
+---
+
+Mercury Core includes a complete virtual economy with currency management, transaction processing, and stipend distribution powered by a dedicated Economy service.
+
+## Economy Service
+
+The economy runs as a separate microservice from the main Site application.
+
+### Architecture
+
+<CardGroup cols={2}>
+  <Card title="Economy Service" icon="coins">
+    Standalone service handling all financial operations
+    
+    - Default port: 2009
+    - REST API for transactions
+    - Persistent balance storage
+    - Transaction history tracking
+  </Card>
+  
+  <Card title="Site Integration" icon="plug">
+    Main application communicates via HTTP
+    
+    - Fetch-based API calls
+    - Balance queries
+    - Transaction processing
+    - Admin operations
+  </Card>
+</CardGroup>
+
+### Configuration
+
+The economy service URL is configured in the Site:
+
+```typescript
+const economyUrl = "localhost:2009"
+```
+
+**Source:** `Site/src/lib/server/economy.ts:4`
+
+## Currency System
+
+Mercury Core uses a virtual currency system with configurable display.
+
+### Currency Symbol
+
+Configure your currency symbol in `Assets/schema.ts`:
+
+```typescript
+CurrencySymbol: "$"  // Displayed before amounts
+```
+
+Examples:
+- `$` for dollars
+- `€` for euros  
+- `🪙` for custom tokens
+- `R$` for Robux-style
+
+### Balance Management
+
+User balances are managed by the Economy service:
+
+**Get Balance:**
+```typescript
+GET /balance/{userId}
+```
+
+Returns the user's current balance as a number.
+
+**Source:** `Site/src/lib/server/economy.ts:31-32`
+
+## Transactions
+
+The economy supports three transaction types:
+
+<Tabs>
+  <Tab title="Transaction">
+    ### Standard Transaction
+    
+    Transfer currency between users:
+    
+    ```typescript
+    {
+      Type: "Transaction",
+      From: string,      // User ID sending currency
+      To: string,        // User ID receiving currency
+      Amount: number,    // Amount to transfer
+      Note: string,      // Description of transaction
+      Link: string,      // URL related to transaction
+      Fee: number,       // Platform fee (0.1 = 10%)
+      Returns: object    // Reserved for future use
+    }
+    ```
+    
+    **Use Cases:**
+    - Asset purchases
+    - User-to-user transfers
+    - Paid features
+    
+    **Platform Fee:**
+    The 10% fee is automatically deducted from transactions to help manage the economy.
+    
+    **Source:** `Site/src/lib/server/economy.ts:77-97`
+  </Tab>
+  
+  <Tab title="Mint">
+    ### Mint Currency
+    
+    Create new currency (admin only):
+    
+    ```typescript
+    {
+      Type: "Mint",
+      To: string,        // User ID receiving new currency
+      Amount: number,    // Amount to create
+      Note: string       // Reason for minting
+    }
+    ```
+    
+    **Use Cases:**
+    - Stipend distribution
+    - Administrative grants
+    - Event rewards
+    - Testing purposes
+    
+    **Source:** `Site/src/lib/server/economy.ts:71-74`
+  </Tab>
+  
+  <Tab title="Burn">
+    ### Burn Currency
+    
+    Remove currency from circulation:
+    
+    ```typescript
+    {
+      Type: "Burn",
+      From: string,      // User ID whose currency is burned
+      Amount: number,    // Amount to remove
+      Note: string,      // Reason for burning
+      Link: string,      // URL related to burn
+      Returns: object    // Reserved for future use
+    }
+    ```
+    
+    **Use Cases:**
+    - Asset creation fees
+    - Group creation fees
+    - Anti-inflation mechanism
+    - Penalty systems
+    
+    **Source:** `Site/src/lib/server/economy.ts:99-123`
+  </Tab>
+</Tabs>
+
+## Stipends
+
+Mercury Core supports automatic currency distribution to users.
+
+### Stipend System
+
+Stipends provide regular income to users:
+
+**Get Current Stipend:**
+```typescript
+GET /currentStipend
+```
+
+Returns the configured stipend amount.
+
+**Award Stipend:**
+```typescript
+POST /stipend/{userId}
+```
+
+Mints currency and adds it to the user's balance.
+
+**Source:** `Site/src/lib/server/economy.ts:29-30`, `71-75`
+
+### Implementation Notes
+
+The stipend system requires external scheduling:
+
+- Stipends are not automatically distributed on a timer
+- You must implement a cron job or scheduled task
+- Call the stipend endpoint for each eligible user
+- Track last stipend time to prevent abuse
+
+## Fee System
+
+Mercury Core uses fees to manage the economy and prevent abuse.
+
+### Platform Fees
+
+**Transaction Fee:**
+```typescript
+fee = 0.1  // 10% of transaction amount
+```
+
+Applied to user-to-user transactions to reduce currency inflation.
+
+### Creation Fees
+
+Certain actions cost currency to prevent spam:
+
+<CardGroup cols={2}>
+  <Card title="Asset Creation" icon="shirt">
+    ```typescript
+    fee * 75 * 1e6
+    ```
+    
+    Currently 7.5M with default 0.1 fee
+  </Card>
+  
+  <Card title="Group Creation" icon="users">
+    ```typescript
+    fee * 50 * 1e6
+    ```
+    
+    Currently 5M with default 0.1 fee
+  </Card>
+</CardGroup>
+
+Creation fees are **burned** rather than transferred, removing currency from circulation.
+
+**Source:** `Site/src/lib/server/economy.ts:125-131`
+
+## Transaction History
+
+Users and administrators can view transaction history.
+
+### User Transactions
+
+View personal transaction history at `/economy`:
+
+- All transactions involving the user
+- Sent and received amounts
+- Transaction notes and timestamps
+- Related links (e.g., to purchased assets)
+- Current balance display
+
+**API Endpoint:**
+```typescript
+GET /transactions/{userId}
+```
+
+**Source:** `Site/src/lib/server/economy.ts:65-66`
+
+### Admin Transactions
+
+Administrators (level 5) can view all transactions at `/admin/transactions`:
+
+- Complete platform transaction history
+- All users' transactions
+- Mint and burn operations
+- Platform-wide financial overview
+
+**API Endpoint:**
+```typescript
+GET /transactions
+```
+
+**Source:** `Site/src/lib/server/economy.ts:67-68`, `Site/src/routes/(main)/admin/transactions/+page.server.ts:8-15`
+
+### Transaction Display
+
+Transactions are enriched with user data for display:
+
+1. Extract all user IDs from transactions
+2. Query database for user information
+3. Map IDs to usernames and status
+4. Replace IDs with user objects in transaction data
+
+This provides readable transaction history with usernames instead of opaque IDs.
+
+**Source:** `Site/src/lib/server/economy.ts:185-220`
+
+## Economy Integration
+
+The economy service integrates with core features:
+
+### Asset Purchases
+
+When a user purchases an asset:
+
+<Steps>
+  <Step title="Validate">
+    Check that user doesn't own asset, it's for sale, and visible
+  </Step>
+  
+  <Step title="Transaction">
+    Process currency transfer from buyer to creator with 10% fee
+  </Step>
+  
+  <Step title="Grant Ownership">
+    Create ownership relationship in database
+  </Step>
+  
+  <Step title="Notify">
+    Send notification to asset creator about the purchase
+  </Step>
+</Steps>
+
+**Source:** `Site/src/routes/(main)/catalog/[id=asset]/[name]/+page.server.ts:163-217`
+
+### Asset Creation
+
+When a user creates an asset:
+
+<Steps>
+  <Step title="Check Balance">
+    Verify user has sufficient funds for creation fee
+  </Step>
+  
+  <Step title="Burn Currency">
+    Remove creation fee from user's balance
+  </Step>
+  
+  <Step title="Create Asset">
+    Add asset to database and storage
+  </Step>
+  
+  <Step title="Record Transaction">
+    Log burn transaction with link to new asset
+  </Step>
+</Steps>
+
+**Source:** `Site/src/lib/server/economy.ts:133-149`
+
+### Group Creation
+
+Similar to asset creation:
+
+1. Check user balance
+2. Burn group creation fee
+3. Create group record
+4. Record transaction
+
+**Source:** `Site/src/lib/server/economy.ts:169-183`
+
+## Error Handling
+
+The economy integration includes robust error handling:
+
+### Connection Errors
+
+```typescript
+economyConnFailed = "Cannot connect to Economy service"
+```
+
+Displayed when the Economy service is unreachable.
+
+### Transaction Errors
+
+Common transaction failures:
+
+- **Insufficient Funds:** User doesn't have enough currency
+- **Invalid Amount:** Negative or non-numeric amounts
+- **Service Unavailable:** Economy service is down
+- **Validation Failure:** Transaction doesn't meet requirements
+
+**Error Response:**
+```typescript
+{ ok: false, msg: "Error description" }
+```
+
+**Source:** `Site/src/lib/server/economy.ts:8-9`
+
+## Security Considerations
+
+### Balance Validation
+
+- All transactions are validated server-side
+- Client cannot manipulate balances
+- Economy service is the single source of truth
+
+### Anti-Fraud
+
+- Creation fees prevent spam
+- Rate limiting on transactions
+- Audit logging of all financial operations
+- Admin-only access to sensitive operations
+
+### Transaction Integrity
+
+- Atomic operations ensure consistency
+- Failed transactions don't affect balances
+- Transaction history is immutable
+- All operations are logged for audit
+
+## Future Enhancements
+
+The economy system includes placeholders for future features:
+
+### Returns System
+
+The `Returns` field in transactions is reserved for:
+
+- Asset refunds and exchanges
+- Partial refunds
+- Store credit systems
+- Chargeback handling
+
+### Free Asset Handling
+
+Implementation note for free assets (price = 0):
+
+```typescript
+// todo work out how free assets are supposed to work
+```
+
+Currently, free assets still require transaction processing.

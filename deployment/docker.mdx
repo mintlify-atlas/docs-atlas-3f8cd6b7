@@ -1,0 +1,356 @@
+---
+title: Docker Deployment
+description: Deploy Mercury Core using Docker and Docker Compose
+---
+
+Mercury Core is designed to run as a containerized application using Docker Compose, which orchestrates three main services: the site, database, and economy services.
+
+## Architecture
+
+Mercury Core consists of three Docker containers:
+
+- **Site** - The main web application built with SvelteKit and Bun (port 4443)
+- **Database** - SurrealDB database for persistent storage (port 8000)
+- **Economy** - Go-based economy service for transaction processing (port 2009)
+
+## Prerequisites
+
+- Docker Engine 20.10 or later
+- Docker Compose v2.0 or later
+- At least 2GB of available RAM
+- 10GB of available disk space
+
+## Quick Start
+
+1. Clone the Mercury Core repository:
+
+```bash
+git clone <repository-url>
+cd mercury-core
+```
+
+2. Configure environment variables:
+
+```bash
+cp Site/.env.example Site/.env
+```
+
+Edit `Site/.env` with your configuration (see [Environment Variables](#environment-variables)).
+
+3. Start all services:
+
+```bash
+docker compose up -d
+```
+
+4. Check service health:
+
+```bash
+docker compose ps
+docker compose logs -f
+```
+
+The site will be available at `https://localhost:4443`.
+
+## Docker Compose Configuration
+
+The `compose.yml` file defines the complete Mercury Core stack:
+
+```yaml
+services:
+    database:
+        build: ./Database
+        ports:
+            - 8000:8000
+        restart: unless-stopped
+        volumes:
+            - ./data/surreal:/database
+        command:
+            - start
+            - -u=root
+            - -p=root
+            - surrealkv://database
+
+    economy:
+        build: ./Economy
+        ports:
+            - 2009:2009
+        restart: unless-stopped
+        volumes:
+            - ./data/economy:/data/economy
+
+    site:
+        build: .
+        ports:
+            - 4443:4443
+        restart: unless-stopped
+        depends_on:
+            - database
+            - economy
+```
+
+### Volume Mounts
+
+Mercury Core uses persistent volumes for data storage:
+
+| Service | Host Path | Container Path | Purpose |
+|---------|-----------|----------------|----------|
+| database | `./data/surreal` | `/database` | SurrealDB database files |
+| economy | `./data/economy` | `/data/economy` | Economy service ledger |
+
+<Warning>
+Ensure these directories have appropriate permissions. The data directories will be created automatically on first run, but backing them up is critical for data persistence.
+</Warning>
+
+### Port Mappings
+
+| Service | Host Port | Container Port | Protocol | Purpose |
+|---------|-----------|----------------|----------|----------|
+| site | 4443 | 4443 | HTTPS | Main web application |
+| database | 8000 | 8000 | HTTP/WebSocket | SurrealDB API |
+| economy | 2009 | 2009 | HTTP | Economy service API |
+
+<Warning>
+The database port (8000) exposes the SurrealDB admin interface. In production, restrict access to this port using firewall rules or bind it to localhost only.
+</Warning>
+
+## Environment Variables
+
+Create a `Site/.env` file based on `Site/.env.example`:
+
+```bash
+ORIGIN=https://mercs.dev
+PORT=4443
+BODY_SIZE_LIMIT=1G
+EMAIL_PASSWORD=password
+RCC_KEY=password
+GAMESERVER_KEY=password
+OPEN_CLOUD_KEY=whatever
+```
+
+### Required Variables
+
+- `ORIGIN` - The public URL of your Mercury Core instance
+- `PORT` - The port the site service listens on (default: 4443)
+- `BODY_SIZE_LIMIT` - Maximum request body size (default: 1G)
+- `EMAIL_PASSWORD` - Password for email service authentication
+- `RCC_KEY` - Authentication key for RCC (Roblox Client Compiler) service
+- `GAMESERVER_KEY` - Authentication key for game server communication
+- `OPEN_CLOUD_KEY` - API key for Open Cloud integration
+
+<Warning>
+Change all default passwords before deploying to production. Use strong, randomly generated passwords for `EMAIL_PASSWORD`, `RCC_KEY`, and `GAMESERVER_KEY`.
+</Warning>
+
+## Container Details
+
+### Site Container
+
+Built from the root `Dockerfile` using the Bun runtime:
+
+- Base image: `oven/bun`
+- Build process: Multi-stage build for optimized size
+- Entry point: `bun -b ./build`
+- Dependencies installed with `bun install --frozen-lockfile -p`
+
+### Database Container
+
+Built from `Database/Dockerfile` using SurrealDB:
+
+- Base image: `surrealdb/surrealdb:v3.0.1`
+- Storage engine: SurrealKV
+- Default credentials: root/root (change in production)
+- Data persistence: `/database` volume mount
+
+<Warning>
+The default database credentials (root/root) are defined in the compose.yml file. For production deployments, change these credentials and restrict network access to the database port.
+</Warning>
+
+### Economy Container
+
+Built from `Economy/Dockerfile` using Go:
+
+- Base image: `golang:latest`
+- Build: Compiled Go binary
+- Working directory: `/economy`
+- Data directory: `/economy/data` (mounted from host)
+
+## Common Operations
+
+### Starting Services
+
+```bash
+# Start all services in detached mode
+docker compose up -d
+
+# Start specific service
+docker compose up -d site
+
+# Start with build (rebuild images)
+docker compose up -d --build
+```
+
+### Stopping Services
+
+```bash
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (WARNING: deletes data)
+docker compose down -v
+
+# Stop specific service
+docker compose stop site
+```
+
+### Viewing Logs
+
+```bash
+# View logs from all services
+docker compose logs -f
+
+# View logs from specific service
+docker compose logs -f site
+
+# View last 100 lines
+docker compose logs --tail=100 database
+```
+
+### Rebuilding Containers
+
+```bash
+# Rebuild all containers
+docker compose build
+
+# Rebuild specific container
+docker compose build site
+
+# Rebuild without cache
+docker compose build --no-cache
+```
+
+### Restarting Services
+
+```bash
+# Restart all services
+docker compose restart
+
+# Restart specific service
+docker compose restart economy
+```
+
+### Accessing Container Shell
+
+```bash
+# Access site container
+docker compose exec site sh
+
+# Access database container
+docker compose exec database sh
+
+# Access economy container
+docker compose exec economy sh
+```
+
+## Service Dependencies
+
+The site service depends on both database and economy services. Docker Compose ensures:
+
+1. Database container starts first
+2. Economy container starts second
+3. Site container starts last and will retry connection until dependencies are ready
+
+The restart policy `unless-stopped` ensures services automatically restart after failures or system reboots.
+
+## Health Checks
+
+Verify all services are running correctly:
+
+```bash
+# Check service status
+docker compose ps
+
+# Check database is accessible
+curl http://localhost:8000/health
+
+# Check economy service
+curl http://localhost:2009/health
+
+# Check site is running
+curl -k https://localhost:4443
+```
+
+## Updating Mercury Core
+
+To update to the latest version:
+
+```bash
+# Pull latest code
+git pull
+
+# Rebuild and restart containers
+docker compose up -d --build
+
+# View logs to ensure successful startup
+docker compose logs -f
+```
+
+<Warning>
+Always backup your data volumes before updating. See the [Database Deployment](/deployment/database) guide for backup procedures.
+</Warning>
+
+## Troubleshooting
+
+### Site Container Won't Start
+
+Check if database and economy services are running:
+
+```bash
+docker compose ps database economy
+docker compose logs database economy
+```
+
+### Database Connection Errors
+
+Verify database is accessible:
+
+```bash
+# Check if database is listening
+docker compose exec database netstat -tlnp | grep 8000
+
+# Test connection
+curl http://localhost:8000/health
+```
+
+### Permission Errors on Volumes
+
+Ensure data directories have correct permissions:
+
+```bash
+sudo chown -R $(id -u):$(id -g) ./data
+chmod -R 755 ./data
+```
+
+### Out of Disk Space
+
+Clean up unused Docker resources:
+
+```bash
+# Remove unused containers, networks, images
+docker system prune -a
+
+# Check disk usage
+docker system df
+```
+
+## Production Considerations
+
+- Use a reverse proxy (Caddy, Nginx) for TLS termination
+- Bind database port to localhost only: `127.0.0.1:8000:8000`
+- Implement automated backups of data volumes
+- Monitor container resource usage
+- Set up container health checks
+- Use Docker secrets for sensitive environment variables
+- Configure log rotation to prevent disk space issues
+
+See [Security Considerations](/deployment/security) for additional hardening recommendations.
