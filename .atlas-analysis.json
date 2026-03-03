@@ -1,0 +1,133 @@
+{
+  "projectType": "saas",
+  "projectName": "Mercury Core",
+  "projectDescription": "Self-hostable MMO game creation platform for building Roblox-style gaming experiences",
+  "theme": "palm",
+  "primaryColor": "#7c3aed",
+  "lightColor": "#a78bfa",
+  "darkColor": "#5b21b6",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Installation",
+            "pages": [
+              "installation/overview",
+              "installation/development",
+              "installation/production"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/services",
+              "concepts/database",
+              "concepts/economy"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/mercury-core",
+              "configuration/environment",
+              "configuration/branding"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/user-management",
+              "features/game-hosting",
+              "features/asset-catalog",
+              "features/economy-system",
+              "features/admin-panel"
+            ]
+          },
+          {
+            "group": "Client Integration",
+            "pages": [
+              "client/overview",
+              "client/setup",
+              "client/corescripts",
+              "client/endpoints"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/docker",
+              "deployment/caddy",
+              "deployment/database",
+              "deployment/security"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Economy Service",
+            "pages": [
+              "api/economy/overview",
+              "api/economy/balance",
+              "api/economy/transactions",
+              "api/economy/stipend"
+            ]
+          },
+          {
+            "group": "Client API",
+            "pages": [
+              "api/client/asset",
+              "api/client/game",
+              "api/client/avatar",
+              "api/client/settings"
+            ]
+          },
+          {
+            "group": "Web API",
+            "pages": [
+              "api/web/authentication",
+              "api/web/users",
+              "api/web/places",
+              "api/web/catalog"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Self-hosted game platform with full user management",
+    "Built-in economy system with virtual currency and transactions",
+    "Asset catalog with rendering and thumbnail generation",
+    "Game hosting with self-hosted and dedicated server options",
+    "Roblox client integration for classic gameplay",
+    "Admin panel for moderation and platform management",
+    "Character customization and avatar system",
+    "Groups, forums, and social features"
+  ],
+  "publicApiSurface": [
+    "GET /balance/{id} - Get user balance",
+    "POST /transact - Transfer currency between users",
+    "POST /mint - Create new currency",
+    "POST /burn - Remove currency from circulation",
+    "POST /stipend/{id} - Issue daily stipend",
+    "GET /transactions/{id} - Get user transaction history",
+    "GET /api/avatar - Avatar rendering API",
+    "GET /api/clientappsettings - Client application settings",
+    "GET /api/clientsharedsettings - Client shared settings",
+    "POST /api/render - Asset rendering queue",
+    "mercury.core.ts Config - Platform configuration schema"
+  ]
+}
