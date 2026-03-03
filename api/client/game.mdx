@@ -81,7 +81,7 @@ The endpoint respects the `Gameservers.Hosting` configuration:
 
 ### Example Request
 
-```bash
+```
 # Local testing
 curl "http://mercury.local/game/join"
 
@@ -146,7 +146,7 @@ The `autopilot` parameter allows loading custom maps:
 
 ### Example Request
 
-```bash
+```
 # Basic server hosting
 curl "http://mercury.local/game/host?ticket=server123"
 
@@ -186,7 +186,7 @@ Returns the binary place file from `../data/places/{id}`.
 
 ### Example Request
 
-```bash
+```
 curl "http://mercury.local/game/123"
 ```
 
@@ -220,7 +220,7 @@ Returns a signed Lua script with:
 
 ### Example Request
 
-```bash
+```
 curl "http://mercury.local/game/123/serve"
 ```
 
@@ -242,7 +242,7 @@ Returns a signed visit script with place ID set to 0.
 
 ### Example Request
 
-```bash
+```
 curl "http://mercury.local/game/visit"
 ```
 
@@ -264,7 +264,7 @@ Returns a signed studio script for launching Studio.
 
 ### Example Request
 
-```bash
+```
 curl "http://mercury.local/game/studio"
 ```
 
@@ -299,7 +299,7 @@ Returns "OK" with no-cache headers.
 
 ### Example Request
 
-```bash
+```
 curl -H "User-Agent: Roblox/WinInet" "http://mercury.local/game/clientpresence?ticket=abc123"
 ```
 
@@ -334,7 +334,7 @@ Returns "OK" with no-cache headers.
 
 ### Example Request
 
-```bash
+```
 curl -H "User-Agent: Roblox/WinInet" "http://mercury.local/game/serverpresence?ticket=server123"
 ```
 
@@ -356,7 +356,7 @@ Returns "OK" as plain text.
 
 ### Example Request
 
-```bash
+```
 curl "http://mercury.local/game/machineconfiguration"
 ```
 
@@ -378,7 +378,7 @@ Returns a 302 redirect to `https://sets.pizzaboxer.xyz/Game/Tools/InsertAsset.as
 
 ### Example Request
 
-```bash
+```
 curl "http://mercury.local/game/tools/insertasset?assetId=123"
 ```
 
@@ -422,7 +422,7 @@ Uses Roblox's thumbnail API with parameters:
 
 ### Example Request
 
-```bash
+```
 curl "http://mercury.local/game/tools/thumbnailasset?aid=123&wd=150&ht=150"
 ```
 

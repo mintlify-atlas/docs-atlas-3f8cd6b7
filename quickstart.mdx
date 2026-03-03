@@ -47,7 +47,7 @@ Before you begin, ensure you have the following installed:
     ```bash
     git clone https://github.com/your-org/mercury-core.git
     cd mercury-core
-    ```
+```
   </Step>
 
   <Step title="Install Dependencies">
@@ -55,7 +55,7 @@ Before you begin, ensure you have the following installed:
     
     ```bash
     bun i
-    ```
+```
     
     This will install all packages defined in `Site/package.json` including:
     - SvelteKit and Svelte 5
@@ -70,7 +70,7 @@ Before you begin, ensure you have the following installed:
     
     ```bash
     cp Site/.env.example Site/.env
-    ```
+```
     
     Edit `Site/.env` with your preferred text editor. The default values work for local development:
     
@@ -82,7 +82,7 @@ Before you begin, ensure you have the following installed:
     RCC_KEY=password
     GAMESERVER_KEY=password
     OPEN_CLOUD_KEY=whatever
-    ```
+```
     
     <Warning>
       For development, you can use the default values. For production, you **must** change all passwords and keys to secure values.
@@ -94,7 +94,7 @@ Before you begin, ensure you have the following installed:
     
     ```bash
     docker compose up -d database economy
-    ```
+```
     
     This starts:
     - **SurrealDB** database on port `8000`
@@ -107,14 +107,14 @@ Before you begin, ensure you have the following installed:
       ```bash
       # Install SurrealDB first: https://surrealdb.com/install
       surreal start -l trace -u=root -p=root file:./data/surreal
-      ```
+```
       
       **Economy Service:**
       ```bash
       # Install Go first: https://go.dev/dl/
       cd Economy
       go run .
-      ```
+```
       
       Run these in separate terminal windows or as background processes.
     </Accordion>
@@ -126,7 +126,7 @@ Before you begin, ensure you have the following installed:
     ```bash
     cd Site
     bun dev
-    ```
+```
     
     You'll see output similar to:
     ```
@@ -134,7 +134,7 @@ Before you begin, ensure you have the following installed:
     
     ➜  Local:   http://localhost:5173/
     ➜  Network: use --host to expose
-    ```
+```
     
     <Note>
       Navigate to the URL shown in your terminal (usually `http://localhost:5173`). **Do not use HTTPS** for local development.
@@ -164,7 +164,7 @@ Before you begin, ensure you have the following installed:
         RightLeg: 119,
         Torso: 23,
       }
-      ```
+```
     </Tip>
   </Step>
 
@@ -212,14 +212,14 @@ While the development server is running:
   If you're using WSL2 and changes aren't reflecting, add this to `vite.config.ts`:
   ```typescript
   server: { watch: { usePolling: true } }
-  ```
+```
 </Tip>
 
 ## Building for Production
 
 To preview how your site will work in production:
 
-```bash
+```
 # From the Site directory
 bun run build
 bun preview
@@ -258,12 +258,12 @@ This creates an optimized production build in `Site/build/` and starts a preview
     Ensure Docker containers are running:
     ```bash
     docker ps
-    ```
+```
     
     You should see `database` and `economy` containers. If not, run:
     ```bash
     docker compose up -d database economy
-    ```
+```
   </Accordion>
   
   <Accordion title="Changes not reflecting">
@@ -278,7 +278,7 @@ This creates an optimized production build in `Site/build/` and starts a preview
     Ensure Bun is installed and in your PATH:
     ```bash
     curl -fsSL https://bun.sh/install | bash
-    ```
+```
     
     Then restart your terminal.
   </Accordion>

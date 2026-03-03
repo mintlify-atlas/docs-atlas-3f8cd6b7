@@ -24,7 +24,7 @@ Before deploying to production, ensure you have:
     ```bash
     git clone <repository-url>
     cd mercury-core
-    ```
+```
   </Step>
 
   <Step title="Configure environment variables">
@@ -32,7 +32,7 @@ Before deploying to production, ensure you have:
     
     ```bash
     cp Site/.env.example Site/.env
-    ```
+```
     
     Edit `Site/.env` with your production settings:
     
@@ -44,7 +44,7 @@ Before deploying to production, ensure you have:
     RCC_KEY=your-secure-key
     GAMESERVER_KEY=your-secure-key
     OPEN_CLOUD_KEY=your-secure-key
-    ```
+```
     
     <Warning>
     Use strong, unique passwords and keys for production. Never commit your `.env` file to version control.
@@ -56,7 +56,7 @@ Before deploying to production, ensure you have:
     
     ```bash
     caddy start
-    ```
+```
     
     <Note>
     If you're using Caddy with multiple configuration files, import the Caddyfile from the repository root into your main Caddyfile, then run `caddy start` and `caddy reload` from that location.
@@ -66,20 +66,20 @@ Before deploying to production, ensure you have:
     
     ```bash
     caddy reload
-    ```
+```
   </Step>
 
   <Step title="Start services with Docker">
     Launch the database and economy services:
     
     <CodeGroup>
-    ```bash Database and Economy only
-    docker compose up -d database economy
-    ```
-    
-    ```bash All services (including site)
-    docker compose up -d
-    ```
+      ```bash Database and Economy only
+      docker compose up -d database economy
+      ```
+      
+      ```bash All services (including site)
+      docker compose up -d
+      ```
     </CodeGroup>
     
     <Note>
@@ -93,7 +93,7 @@ Before deploying to production, ensure you have:
     ```bash
     cd Site
     bun prod
-    ```
+```
     
     This command installs production dependencies and builds the optimized site.
   </Step>
@@ -103,7 +103,7 @@ Before deploying to production, ensure you have:
     
     ```bash
     bun ./build
-    ```
+```
     
     <Warning>
     Note: This is `bun ./build` (running the built application), not `bun build` (which would invoke the build script).
@@ -117,14 +117,14 @@ For production environments, you'll want Mercury Core to run continuously in the
 
 ### Option 1: PM2 (Recommended)
 
-```bash
+```
 cd Site
 bun x pm2 start
 ```
 
 Manage your PM2 processes:
 
-```bash
+```
 # List running processes
 bun x pm2 list
 
@@ -140,7 +140,7 @@ bun x pm2 stop mercurycore
 
 ### Option 2: GNU Screen
 
-```bash
+```
 # Create a new screen session
 screen -S mercury
 
@@ -158,7 +158,7 @@ screen -r mercury
 
 Run the entire site in a Docker container:
 
-```bash
+```
 docker compose up -d
 ```
 
@@ -186,7 +186,7 @@ WantedBy=multi-user.target
 
 Enable and start the service:
 
-```bash
+```
 sudo systemctl enable mercury-core
 sudo systemctl start mercury-core
 sudo systemctl status mercury-core
@@ -253,14 +253,14 @@ Regularly back up your data directory. Consider:
 
 For better data management and safety:
 
-```bash
+```
 # Example: Mount external volume
 sudo mount /dev/sdb1 /path/to/mercury-core/data
 ```
 
 Update your `compose.yml` to use external volumes:
 
-```yaml
+```
 volumes:
   - /mnt/external-storage/surreal:/database
   - /mnt/external-storage/economy:/data/economy
@@ -295,7 +295,7 @@ The `bun prod` command creates an optimized build:
 
 Configure body size limits in your `.env`:
 
-```bash
+```
 BODY_SIZE_LIMIT=1G
 ```
 
@@ -305,7 +305,7 @@ Adjust based on your expected asset upload sizes.
 
 Limit Docker container resources if needed:
 
-```yaml
+```
 services:
   database:
     deploy:
@@ -322,7 +322,7 @@ services:
 
 ### Docker Logs
 
-```bash
+```
 # View logs for all services
 docker compose logs
 
@@ -335,7 +335,7 @@ docker compose logs database
 
 ### PM2 Logs
 
-```bash
+```
 # View all logs
 bun x pm2 logs
 
@@ -351,29 +351,29 @@ To update your production deployment:
   <Step title="Pull latest changes">
     ```bash
     git pull origin main
-    ```
+```
   </Step>
 
   <Step title="Update dependencies and rebuild">
     ```bash
     cd Site
     bun prod
-    ```
+```
   </Step>
 
   <Step title="Restart services">
     <CodeGroup>
     ```bash PM2
     bun x pm2 restart mercurycore
-    ```
+```
     
     ```bash Docker
     docker compose restart
-    ```
+```
     
     ```bash Systemd
     sudo systemctl restart mercury-core
-    ```
+```
     </CodeGroup>
   </Step>
 </Steps>
@@ -384,7 +384,7 @@ To update your production deployment:
 
 Check service status:
 
-```bash
+```
 # Docker services
 docker compose ps
 docker compose logs
@@ -398,7 +398,7 @@ bun x pm2 logs
 
 Change the port in `Site/.env`:
 
-```bash
+```
 PORT=5000
 ```
 
@@ -406,7 +406,7 @@ PORT=5000
 
 Verify the database is running:
 
-```bash
+```
 docker compose ps database
 curl http://localhost:8000/health
 ```

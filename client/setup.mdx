@@ -36,7 +36,7 @@ data/
 
 Generate an RSA key pair for script signing:
 
-```bash
+```
 # Generate private key
 openssl genrsa -out data/PrivateKey.pem 2048
 
@@ -66,7 +66,7 @@ Loadscripts are Lua scripts that initialize different game modes. Create these f
 
 Used when visiting places:
 
-```lua
+```
 -- The script will have _PLACE_ID replaced with "0"
 local placeId = _PLACE_ID
 -- Add your visit initialization code
@@ -89,7 +89,7 @@ Used when joining multiplayer games. This script receives several template repla
 
 Used for Studio mode:
 
-```lua
+```
 -- Studio initialization code
 ```
 

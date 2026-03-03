@@ -9,7 +9,7 @@ Mercury Core supports flexible game hosting with both self-hosted and dedicated 
 
 Configure your preferred hosting mode in `Assets/schema.ts`:
 
-```typescript
+```
 Gameservers: {
   Hosting: "Selfhosted" | "Dedicated" | "Both"
 }
@@ -245,7 +245,7 @@ Orbiter is Mercury Core's game server orchestrator.
 
 Configure Orbiter in `Assets/schema.ts`:
 
-```typescript
+```
 OrbiterPrivateURL: "http://localhost:8080",  // Private API for Site
 OrbiterPublicDomain: "orbiter.example.com",  // Public domain for browsers
 ```
@@ -263,7 +263,7 @@ OrbiterPublicDomain: "orbiter.example.com",  // Public domain for browsers
 
 Mercury Core uses a custom URI scheme to launch the game client:
 
-```typescript
+```
 LauncherURI: "mercurycore://"  // Configure in schema.ts
 ```
 

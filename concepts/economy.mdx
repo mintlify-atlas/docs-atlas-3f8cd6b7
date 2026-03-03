@@ -23,7 +23,7 @@ The economy is designed around several key principles:
 
 Currency is stored as an unsigned 64-bit integer with micro-precision:
 
-```go
+```
 const (
   Micro Currency = 1
   Milli          = 1e3 * Micro      // 1,000 micro
@@ -49,7 +49,7 @@ const (
 
 Users receive free currency daily:
 
-```go
+```
 const Stipend = 10 * Unit  // 10.000000 units
 const stipendTime = 12 * 60 * 60 * 1000  // 12 hours in milliseconds
 ```
@@ -64,7 +64,7 @@ const stipendTime = 12 * 60 * 60 * 1000  // 12 hours in milliseconds
 
 Transfer currency between users.
 
-```go
+```
 type SentTx struct {
   To, From User
   Amount   Currency
@@ -75,7 +75,7 @@ type SentTx struct {
 
 **Example**: Alice buys a hat from Bob for 5 units
 
-```json
+```
 {
   "From": "user:alice",
   "To": "user:bob",
@@ -98,7 +98,7 @@ type SentTx struct {
 
 Create new currency from thin air (admin/stipend).
 
-```go
+```
 type SentMint struct {
   To     User
   Amount Currency
@@ -108,7 +108,7 @@ type SentMint struct {
 
 **Example**: Daily stipend
 
-```json
+```
 {
   "To": "user:alice",
   "Amount": 10000000,
@@ -127,7 +127,7 @@ type SentMint struct {
 
 Remove currency from circulation (e.g., creation fees).
 
-```go
+```
 type SentBurn struct {
   From       User
   Amount     Currency
@@ -138,7 +138,7 @@ type SentBurn struct {
 
 **Example**: User creates an asset (pays creation fee)
 
-```json
+```
 {
   "From": "user:alice",
   "Amount": 7500000,
@@ -175,7 +175,7 @@ Burn {"From":"user:alice","Amount":7500000,"Note":"Created asset",...}
 
 ### Startup Process
 
-```mermaid
+```
 sequenceDiagram
     participant Main
     participant Ledger
@@ -217,7 +217,7 @@ CCU           10.000000 unit
 
 The service maintains three maps:
 
-```go
+```
 type Economy struct {
   data         io.ReadWriteSeeker  // File handle
   balances     map[User]Currency   // Current balances
@@ -228,7 +228,7 @@ type Economy struct {
 
 ### Write Process
 
-```mermaid
+```
 sequenceDiagram
     participant API
     participant Economy
@@ -264,7 +264,7 @@ Burn successful         user:alice -[7.500000 unit]->
 
 Creation fees are calculated based on a base fee:
 
-```typescript
+```
 // Site/src/lib/server/economy.ts
 export const fee = 0.1;
 const getFeeBasedPrice = (multiplier: number): number =>
@@ -286,7 +286,7 @@ These fees create deflationary pressure, balancing the inflationary stipends.
 The service tracks key metrics:
 
 ### User Count
-```go
+```
 func (e *Economy) GetUserCount() int {
   return len(e.balances)
 }
@@ -295,7 +295,7 @@ func (e *Economy) GetUserCount() int {
 Number of users who have ever transacted.
 
 ### Economy Size
-```go
+```
 func (e *Economy) GetEconomySize() (size Currency) {
   for _, v := range e.balances {
     size += v
@@ -307,7 +307,7 @@ func (e *Economy) GetEconomySize() (size Currency) {
 Total currency in circulation (sum of all balances).
 
 ### Currency per User (CCU)
-```go
+```
 func (e *Economy) CCU() Currency {
   users := len(e.balances)
   if users == 0 {
@@ -323,7 +323,7 @@ Average balance across all users.
 
 The economy service supports asset ownership (currently unused):
 
-```go
+```
 type AssetType string
 type AssetId int
 type Asset string  // "asset-123456789"
@@ -338,7 +338,7 @@ const (
 
 Assets can be transferred in transactions:
 
-```json
+```
 {
   "From": "user:alice",
   "To": "user:bob",
@@ -357,7 +357,7 @@ This would transfer 5 units from Alice to Bob, and transfer 1 copy of asset-1234
 
 The Site service includes a typed client:
 
-```typescript
+```
 import { 
   getBalance, 
   getStipend,
@@ -435,7 +435,7 @@ invalid transaction: transaction must have a note
 
 The service validates ledger integrity on startup:
 
-```go
+```
 if tx.Amount > e.balances[tx.From] {
   fmt.Println("Invalid transaction in ledger")
   os.Exit(1)
@@ -461,7 +461,7 @@ If the ledger becomes corrupted:
 
 Get recent transactions:
 
-```typescript
+```
 import { getTransactions, getAdminTransactions } from '$lib/server/economy';
 
 // User's transactions (last 100)
@@ -478,7 +478,7 @@ const adminResult = await getAdminTransactions(fetch);
 
 **Response Structure**:
 
-```typescript
+```
 type ReceivedTx = {
   Id: string;
   Time: number;
@@ -512,7 +512,7 @@ type ReceivedTx = {
 
 The Site service transforms internal IDs to usernames:
 
-```typescript
+```
 import { transformTransactions } from '$lib/server/economy';
 
 const result = await getTransactions(fetch, userId);
@@ -540,7 +540,7 @@ This allows displaying "alice" instead of "user:abc123xyz" in transaction histor
 
 ### Target Economics
 
-```go
+```
 // Commented out - future dynamic fee system
 // const TCU = float64(100 * Unit)  // Target Currency per User
 ```
@@ -581,13 +581,13 @@ Approximate memory per user:
 
 Simply copy the ledger file:
 
-```bash
+```
 cp data/economy/ledger data/economy/ledger.backup
 ```
 
 ### Restore
 
-```bash
+```
 # Stop the economy service
 docker compose stop economy
 

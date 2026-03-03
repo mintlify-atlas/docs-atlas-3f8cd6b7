@@ -13,7 +13,7 @@ Retrieve detailed information about a specific place.
 
 ### Request
 
-```http
+```
 GET /place/{id}/{name}
 ```
 
@@ -142,7 +142,7 @@ Generate a ticket to join a game server.
 
 ### Request
 
-```http
+```
 POST /place/{id}/{name}?/join
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -193,7 +193,7 @@ Start a dedicated game server for a place.
 
 ### Request
 
-```http
+```
 POST /place/{id}/{name}?/start
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -241,7 +241,7 @@ Stop a running dedicated game server.
 
 ### Request
 
-```http
+```
 POST /place/{id}/{name}?/close
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -284,7 +284,7 @@ Manage place configuration. All settings endpoints require the user to be the pl
 
 ### Get Place Settings
 
-```http
+```
 GET /place/{id}/{name}/settings
 ```
 
@@ -340,7 +340,7 @@ Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts
 
 ### Update View Settings
 
-```http
+```
 POST /place/{id}/{name}/settings?/view
 Content-Type: multipart/form-data
 ```
@@ -366,7 +366,7 @@ Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts
 
 ### Update Network Settings
 
-```http
+```
 POST /place/{id}/{name}/settings?/network
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -393,7 +393,7 @@ Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts
 
 ### Update Privacy Settings
 
-```http
+```
 POST /place/{id}/{name}/settings?/privacy
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -408,7 +408,7 @@ Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts
 
 ### Regenerate Server Ticket
 
-```http
+```
 POST /place/{id}/{name}/settings?/ticket
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -421,7 +421,7 @@ Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts
 
 ### Regenerate Private Link
 
-```http
+```
 POST /place/{id}/{name}/settings?/privatelink
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -434,7 +434,7 @@ Source: `Site/src/routes/(main)/place/[id=asset]/[name]/settings/+page.server.ts
 
 ### Upload Place Data
 
-```http
+```
 POST /place/{id}/{name}/settings?/data
 Content-Type: multipart/form-data
 ```

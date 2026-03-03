@@ -13,7 +13,7 @@ Authenticate a user and create a session.
 
 ### Request
 
-```http
+```
 POST /login
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -62,7 +62,7 @@ Create a new user account and initiate a session.
 
 ### Request
 
-```http
+```
 POST /register?/register
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -126,7 +126,7 @@ On success, creates the user account, requests avatar render, sets session cooki
 
 The first account created on a Mercury instance uses a special endpoint with relaxed requirements.
 
-```http
+```
 POST /register?/initialAccount
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -155,7 +155,7 @@ Invalidate all user sessions and redirect to login.
 
 ### Request
 
-```http
+```
 POST /settings?/sessions
 Content-Type: application/x-www-form-urlencoded
 ```

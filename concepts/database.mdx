@@ -21,7 +21,7 @@ Authentication: root:root (change in production!)
 
 Stores user accounts and profiles.
 
-```sql
+```
 DEFINE TABLE user SCHEMAFULL TYPE NORMAL;
   DEFINE FIELD admin ON user TYPE bool DEFAULT 
     count(SELECT 1 FROM user) == 0;  -- First user is admin
@@ -67,7 +67,7 @@ DEFINE INDEX usernameI ON user COLUMNS username UNIQUE;
 
 Catalog items (clothing, gear, models, etc.).
 
-```sql
+```
 DEFINE TABLE asset SCHEMAFULL TYPE NORMAL;
   -- Privileged assets: 8 digits (< 100000000)
   -- User assets: 9 digits (100000000-999999999)
@@ -101,7 +101,7 @@ DEFINE TABLE asset SCHEMAFULL TYPE NORMAL;
 
 Game servers and experiences.
 
-```sql
+```
 DEFINE TABLE place SCHEMAFULL TYPE NORMAL;
   DEFINE FIELD id ON place TYPE int;
   DEFINE FIELD created ON place TYPE datetime DEFAULT time::now();
@@ -128,7 +128,7 @@ DEFINE TABLE place SCHEMAFULL TYPE NORMAL;
 
 Unified comment system for status posts, forum posts, and asset comments.
 
-```sql
+```
 DEFINE TABLE comment SCHEMAFULL TYPE NORMAL;
   DEFINE FIELD author ON comment COMPUTED
     (SELECT status, username FROM $this<-createdComment<-user)[0];
@@ -170,7 +170,7 @@ SurrealDB's graph capabilities model social features as edges.
 
 ### Social Graph
 
-```mermaid
+```
 graph LR
     A[User A] -->|friends| B[User B]
     B -->|friends| A
@@ -179,7 +179,7 @@ graph LR
     D -->|request| A
 ```
 
-```sql
+```
 -- Bidirectional friendship
 DEFINE TABLE friends SCHEMAFULL TYPE RELATION 
   FROM user TO user ENFORCED;
@@ -198,7 +198,7 @@ DEFINE TABLE request SCHEMAFULL TYPE RELATION
 
 ### Content Relationships
 
-```sql
+```
 -- User created comment
 DEFINE TABLE createdComment SCHEMAFULL TYPE RELATION 
   FROM user TO comment;
@@ -229,7 +229,7 @@ DEFINE TABLE dislikes SCHEMAFULL TYPE RELATION
 
 ### Session Management
 
-```sql
+```
 DEFINE TABLE session SCHEMAFULL TYPE NORMAL;
   DEFINE FIELD created ON session TYPE datetime DEFAULT time::now();
   DEFINE FIELD expires ON session TYPE datetime DEFAULT time::now() + 30d;
@@ -248,7 +248,7 @@ SurrealDB supports custom functions for reusable logic.
 
 Generate random 9-digit asset ID:
 
-```sql
+```
 DEFINE FUNCTION fn::assetId() {
   RETURN rand::int(100_000_000, 999_999_999);
 };
@@ -258,7 +258,7 @@ DEFINE FUNCTION fn::assetId() {
 
 Create audit log entry:
 
-```sql
+```
 DEFINE FUNCTION fn::auditLog($action: string, $note: string, $user: record) {
   CREATE auditLog CONTENT {
     action: $action,
@@ -272,7 +272,7 @@ DEFINE FUNCTION fn::auditLog($action: string, $note: string, $user: record) {
 
 Create notification:
 
-```sql
+```
 DEFINE FUNCTION fn::notify(
   $sender: record, 
   $receiver: record, 
@@ -293,7 +293,7 @@ DEFINE FUNCTION fn::notify(
 
 Recursively fetch nested comments (up to 10 levels deep):
 
-```sql
+```
 DEFINE FUNCTION fn::getComments(
   $comment: record<comment>, 
   $depth: number, 
@@ -327,7 +327,7 @@ DEFINE FUNCTION fn::getComments(
 
 Automatic audit logging for administrative actions.
 
-```sql
+```
 -- Log banner creation
 DEFINE EVENT bannerCreateLog ON TABLE banner
 WHEN $event = "CREATE" THEN
@@ -356,13 +356,13 @@ WHEN $event = "CREATE" THEN
 
 Get user's friends:
 
-```sql
+```
 SELECT ->friends->user.* FROM user:alice;
 ```
 
 Get mutual friends:
 
-```sql
+```
 SELECT ->friends->user 
 FROM user:alice 
 WHERE ->friends->user IN (SELECT <-friends<-user FROM user:bob);
@@ -372,7 +372,7 @@ WHERE ->friends->user IN (SELECT <-friends<-user FROM user:bob);
 
 Get user's inventory (wearable assets):
 
-```sql
+```
 SELECT ->ownsAsset->asset.* 
 FROM user:alice 
 WHERE ->ownsAsset->asset.type IN [2, 8, 11, 12, 13, 18];
@@ -382,7 +382,7 @@ WHERE ->ownsAsset->asset.type IN [2, 8, 11, 12, 13, 18];
 
 Count user's friends:
 
-```sql
+```
 SELECT count(->friends) AS friendCount FROM user:alice;
 ```
 
@@ -390,7 +390,7 @@ SELECT count(->friends) AS friendCount FROM user:alice;
 
 The Site service imports `.surql` files:
 
-```typescript
+```
 import getSessionAndUserQuery from '$lib/server/getSessionAndUser.surql';
 
 const [result] = await db.query<[User | null]>(
@@ -400,7 +400,7 @@ const [result] = await db.query<[User | null]>(
 ```
 
 **Example query file** (getSessionAndUser.surql):
-```sql
+```
 SELECT *, 
   id AS userId,
   ->friends->user AS friends
@@ -412,7 +412,7 @@ WHERE ->hasSession->session.expires > time::now();
 
 The Site service defines TypeScript interfaces matching the schema:
 
-```typescript
+```
 interface User {
   id: string;
   username: string;
@@ -445,7 +445,7 @@ interface ContentHistory {
 
 The `OVERWRITE` keyword in schema definitions ensures the schema updates on every startup:
 
-```sql
+```
 DEFINE TABLE OVERWRITE user SCHEMAFULL TYPE NORMAL;
 ```
 
@@ -462,7 +462,7 @@ This allows for:
 
 Currently, only username has an index:
 
-```sql
+```
 DEFINE INDEX usernameI ON user COLUMNS username UNIQUE;
 ```
 
@@ -484,7 +484,7 @@ For high-traffic queries, consider materializing these values.
 
 Graph traversals can be expensive. Use `LIMIT` and pagination:
 
-```sql
+```
 SELECT ->friends->user.* 
 FROM user:alice 
 LIMIT 50 START 0;
@@ -495,7 +495,7 @@ LIMIT 50 START 0;
 SurrealDB stores data in `data/surreal/` using the SurrealKV engine.
 
 **Backup**:
-```bash
+```
 surreal export --conn ws://localhost:8000 \
   --user root --pass root \
   --ns main --db main \
@@ -503,7 +503,7 @@ surreal export --conn ws://localhost:8000 \
 ```
 
 **Restore**:
-```bash
+```
 surreal import --conn ws://localhost:8000 \
   --user root --pass root \
   --ns main --db main \

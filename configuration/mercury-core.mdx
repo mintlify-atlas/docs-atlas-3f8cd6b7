@@ -16,7 +16,7 @@ If you're running in production, you'll need to rebuild Mercury Core to apply ch
   
   ```typescript
   Name: "Mercury"
-  ```
+```
 </ParamField>
 
 <ParamField path="Domain" type="string" required>
@@ -24,7 +24,7 @@ If you're running in production, you'll need to rebuild Mercury Core to apply ch
   
   ```typescript
   Domain: "mercs.dev"
-  ```
+```
 </ParamField>
 
 <ParamField path="CurrencySymbol" type="string" required>
@@ -32,7 +32,7 @@ If you're running in production, you'll need to rebuild Mercury Core to apply ch
   
   ```typescript
   CurrencySymbol: "屌"
-  ```
+```
 </ParamField>
 
 <ParamField path="Pages" type="array" required>
@@ -42,7 +42,7 @@ If you're running in production, you'll need to rebuild Mercury Core to apply ch
   
   ```typescript
   Pages: ["Statistics", "Forum", "Groups"]
-  ```
+```
 </ParamField>
 
 ## Service URLs
@@ -52,7 +52,7 @@ If you're running in production, you'll need to rebuild Mercury Core to apply ch
   
   ```typescript
   DatabaseURL: "http://localhost:8000"
-  ```
+```
 </ParamField>
 
 <ParamField path="RCCServiceProxyURL" type="string" required>
@@ -60,7 +60,7 @@ If you're running in production, you'll need to rebuild Mercury Core to apply ch
   
   ```typescript
   RCCServiceProxyURL: "http://localhost:64990"
-  ```
+```
 </ParamField>
 
 <ParamField path="OrbiterPrivateURL" type="string" required>
@@ -68,7 +68,7 @@ If you're running in production, you'll need to rebuild Mercury Core to apply ch
   
   ```typescript
   OrbiterPrivateURL: "http://localhost:64991"
-  ```
+```
 </ParamField>
 
 <ParamField path="OrbiterPublicDomain" type="string" required>
@@ -76,7 +76,7 @@ If you're running in production, you'll need to rebuild Mercury Core to apply ch
   
   ```typescript
   OrbiterPublicDomain: "localhost:64992"
-  ```
+```
 </ParamField>
 
 <ParamField path="LauncherURI" type="string" required>
@@ -84,7 +84,7 @@ If you're running in production, you'll need to rebuild Mercury Core to apply ch
   
   ```typescript
   LauncherURI: "mercury-launcher:"
-  ```
+```
 </ParamField>
 
 ## Default Body Colors
@@ -101,7 +101,7 @@ If you're running in production, you'll need to rebuild Mercury Core to apply ch
     RightLeg: 119,
     Torso: 23,
   }
-  ```
+```
   
   <Expandable title="Body color properties">
     <ParamField path="DefaultBodyColors.Head" type="number" required>
@@ -141,7 +141,7 @@ If you're running in production, you'll need to rebuild Mercury Core to apply ch
     FormattedErrors: false,
     Time: true,
   }
-  ```
+```
   
   <Expandable title="Logging properties">
     <ParamField path="Logging.Requests" type="boolean" required>
@@ -177,7 +177,7 @@ If you're running in production, you'll need to rebuild Mercury Core to apply ch
         "All of our clients will remain as vanilla as possible, to make sure it's exactly as you remember it.",
     },
   }
-  ```
+```
   
   <Expandable title="Branding properties">
     <ParamField path="Branding.Favicon" type="string" required>
@@ -218,7 +218,7 @@ See the [Branding](/configuration/branding) page for more details.
       "Images/DefaultThumbnail3.avif",
     ],
   }
-  ```
+```
   
   <Expandable title="Image properties">
     <ParamField path="Images.DefaultPlaceIcons" type="string[]" required>
@@ -243,7 +243,7 @@ See the [Branding](/configuration/branding) page for more details.
       Path: "Themes/Standard.css",
     },
   ]
-  ```
+```
   
   <Expandable title="Theme properties">
     <ParamField path="Themes[].Name" type="string" required>
@@ -267,7 +267,7 @@ See the [Branding](/configuration/branding) page for more details.
     ReplaceWith: "#",
     ReplaceType: "Character",
   }
-  ```
+```
   
   <Expandable title="Filtering properties">
     <ParamField path="Filtering.FilteredWords" type="string[]" required>
@@ -299,7 +299,7 @@ See the [Branding](/configuration/branding) page for more details.
     },
     Emails: true,
   }
-  ```
+```
   
   <Expandable title="Registration properties">
     <ParamField path="Registration.Keys" type="object" required>
@@ -333,7 +333,7 @@ See the [Branding](/configuration/branding) page for more details.
     Port: 587,
     Username: "username",
   }
-  ```
+```
   
   <Note>
   The email password should be configured in your environment variables as `EMAIL_PASSWORD`. See [Environment Variables](/configuration/environment) for details.
@@ -363,7 +363,7 @@ See the [Branding](/configuration/branding) page for more details.
   Gameservers: {
     Hosting: "Both",
   }
-  ```
+```
   
   <Expandable title="Gameserver properties">
     <ParamField path="Gameservers.Hosting" type="'Selfhosted' | 'Dedicated' | 'Both'" required>
@@ -378,7 +378,7 @@ See the [Branding](/configuration/branding) page for more details.
 
 ## Example Configuration
 
-```typescript
+```
 export default {
   Name: "Mercury",
   Domain: "mercs.dev",

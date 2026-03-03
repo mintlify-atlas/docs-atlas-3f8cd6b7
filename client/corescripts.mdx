@@ -23,7 +23,7 @@ Served when visiting a place without joining a multiplayer session.
 - `_PLACE_ID` - Replaced with `"0"`
 
 **Example:**
-```lua
+```
 local placeId = _PLACE_ID
 -- Initialize solo visit mode
 ```
@@ -45,7 +45,7 @@ Served when joining a multiplayer game session.
 - `_PING_URL` - Client presence ping endpoint
 
 **Example:**
-```lua
+```
 local placeId = _PLACE_ID
 local serverAddress = _SERVER_ADDRESS
 local serverPort = _SERVER_PORT
@@ -67,7 +67,7 @@ Served when launching Roblox Studio.
 **Template Variables:** None
 
 **Example:**
-```lua
+```
 -- Initialize Studio environment
 ```
 
@@ -84,7 +84,7 @@ Served when hosting a game server (self-hosted mode only).
 - `_SERVER_PRESENCE_URL` - Server presence ping endpoint
 
 **Example:**
-```lua
+```
 local baseUrl = _BASE_URL
 local mapLocation = _MAP_LOCATION
 local serverPort = _SERVER_PORT
@@ -131,7 +131,7 @@ data/
 
 All loadscripts are automatically signed before being sent to the client using the `SignData` function:
 
-```typescript
+```
 export async function SignData(data: string, assetId?: number) {
   const signed = `${assetId ? `--rbxassetid%${assetId}%` : ""}\n${data}`
   const sig = createSign("sha1")
@@ -142,13 +142,13 @@ export async function SignData(data: string, assetId?: number) {
 ```
 
 The signature format is:
-```lua
+```
 --rbxsig%{base64_signature}%--rbxassetid%{asset_id}%
 {script_content}
 ```
 
 For loadscripts without an asset ID:
-```lua
+```
 --rbxsig%{base64_signature}%
 {script_content}
 ```
@@ -172,7 +172,7 @@ For loadscripts without an asset ID:
 
 When writing loadscripts, use template variables that Mercury Core will replace:
 
-```lua
+```
 -- join.lua example
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
@@ -189,7 +189,7 @@ end)
 
 Mercury Core performs string replacement before signing:
 
-```typescript
+```
 const script = (await scriptFile.text())
   .replaceAll("_PLACE_ID", place.id.toString())
   .replaceAll("_SERVER_ADDRESS", `"${serverAddress}"`)
@@ -216,20 +216,20 @@ For reference implementations of corescripts and loadscripts, see:
    ```
    Requested asset 123
    Serving privileged 123
-   ```
+```
 
 2. Verify script signing is working:
    ```typescript
    const signedScript = await SignData(script)
    console.log(signedScript.substring(0, 100)) // Check signature prefix
-   ```
+```
 
 3. Test template replacement:
    ```typescript
    console.log(script) // Before replacement
    const processed = script.replaceAll("_USERNAME", "TestUser")
    console.log(processed) // After replacement
-   ```
+```
 
 ### Client-Side Debugging
 

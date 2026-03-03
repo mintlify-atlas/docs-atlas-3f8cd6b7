@@ -34,7 +34,7 @@ For example, a balance of `10000000` represents `10.000000 unit`.
 
 ### Request
 
-```bash
+```
 curl http://localhost:2009/balance/user123
 ```
 
@@ -50,7 +50,7 @@ This represents a balance of 10.000000 units.
 
 If a user has never transacted, their balance will be `0`:
 
-```bash
+```
 curl http://localhost:2009/balance/newuser
 ```
 
@@ -70,7 +70,7 @@ If the user ID format is invalid:
 
 **Status Code**: `400 Bad Request`
 
-```bash
+```
 curl http://localhost:2009/balance/
 ```
 

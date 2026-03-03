@@ -13,7 +13,7 @@ Retrieve paginated catalog listings.
 
 ### Request
 
-```http
+```
 GET /catalog?page={page}
 ```
 
@@ -46,7 +46,7 @@ Search for assets by name or other criteria.
 
 ### Request
 
-```http
+```
 GET /catalog/search?q={query}&p={page}
 ```
 
@@ -62,7 +62,7 @@ GET /catalog/search?q={query}&p={page}
 
 Returns JSON array of matching assets.
 
-```json
+```
 [
   {
     "id": 123,
@@ -94,7 +94,7 @@ Retrieve detailed information about a specific catalog asset.
 
 ### Request
 
-```http
+```
 GET /catalog/{id}/{name}
 ```
 
@@ -201,7 +201,7 @@ Buy a catalog asset.
 
 ### Request
 
-```http
+```
 POST /catalog/{id}/{name}?/buy
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -250,7 +250,7 @@ Post a comment on a catalog asset.
 
 ### Request
 
-```http
+```
 POST /catalog/{id}/{name}?/comment
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -307,7 +307,7 @@ Request a re-render of an asset's thumbnail. Requires administrator privileges.
 
 ### Request
 
-```http
+```
 POST /catalog/{id}/{name}?/rerender
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -352,7 +352,7 @@ Asset settings and management endpoints for asset creators.
 
 ### Get Asset Settings
 
-```http
+```
 GET /catalog/{id}/{name}/settings
 ```
 

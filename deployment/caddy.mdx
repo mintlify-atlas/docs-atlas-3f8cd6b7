@@ -17,7 +17,7 @@ Caddy is the recommended reverse proxy for Mercury Core, providing automatic HTT
 
 ### Ubuntu/Debian
 
-```bash
+```
 sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
@@ -29,7 +29,7 @@ sudo apt install caddy
 
 You can also run Caddy as a Docker container alongside Mercury Core:
 
-```bash
+```
 docker run -d \
   --name caddy \
   --network host \
@@ -43,7 +43,7 @@ docker run -d \
 
 Mercury Core includes a production-ready Caddyfile at `Site/Caddyfile`:
 
-```caddy
+```
 mercs.dev {
     rewrite /Asset /asset
     rewrite /Asset/ /asset
@@ -115,13 +115,13 @@ To adapt the Caddyfile for your domain:
 
 1. Copy the example Caddyfile:
 
-```bash
+```
 cp Site/Caddyfile /etc/caddy/Caddyfile
 ```
 
 2. Replace `mercs.dev` with your domain:
 
-```caddy
+```
 yourdomain.com {
     # ... rewrite rules ...
     reverse_proxy localhost:4443
@@ -134,14 +134,14 @@ www.yourdomain.com {
 
 3. Ensure your domain's DNS points to your server:
 
-```bash
+```
 # A record for yourdomain.com
 # A record for www.yourdomain.com
 ```
 
 4. Reload Caddy:
 
-```bash
+```
 sudo systemctl reload caddy
 ```
 
@@ -151,7 +151,7 @@ sudo systemctl reload caddy
 
 If Mercury Core runs on a different port:
 
-```caddy
+```
 yourdomain.com {
     # ... rewrites ...
     reverse_proxy localhost:8080
@@ -160,7 +160,7 @@ yourdomain.com {
 
 ### Adding Response Headers
 
-```caddy
+```
 yourdomain.com {
     header {
         X-Content-Type-Options "nosniff"
@@ -176,7 +176,7 @@ yourdomain.com {
 
 For large file uploads (matches `BODY_SIZE_LIMIT` in `.env`):
 
-```caddy
+```
 yourdomain.com {
     request_body {
         max_size 1GB
@@ -188,7 +188,7 @@ yourdomain.com {
 
 ### Access Logging
 
-```caddy
+```
 yourdomain.com {
     log {
         output file /var/log/caddy/access.log
@@ -203,7 +203,7 @@ yourdomain.com {
 
 Protect against abuse with rate limiting:
 
-```caddy
+```
 yourdomain.com {
     rate_limit {
         zone dynamic {
@@ -223,7 +223,7 @@ yourdomain.com {
 
 If you have your own certificates:
 
-```caddy
+```
 yourdomain.com {
     tls /path/to/cert.pem /path/to/key.pem
     
@@ -235,7 +235,7 @@ yourdomain.com {
 
 For local development:
 
-```caddy
+```
 localhost:443 {
     tls internal
     
@@ -247,7 +247,7 @@ localhost:443 {
 
 For alternative certificate authorities:
 
-```caddy
+```
 {
     acme_ca https://acme.zerossl.com/v2/DV90
 }
@@ -261,7 +261,7 @@ yourdomain.com {
 
 ### Start/Stop/Restart
 
-```bash
+```
 # Start Caddy
 sudo systemctl start caddy
 
@@ -277,7 +277,7 @@ sudo systemctl reload caddy
 
 ### Check Status
 
-```bash
+```
 # Service status
 sudo systemctl status caddy
 
@@ -290,7 +290,7 @@ caddy validate --config /etc/caddy/Caddyfile
 
 ### Enable Auto-Start
 
-```bash
+```
 sudo systemctl enable caddy
 ```
 
@@ -300,7 +300,7 @@ sudo systemctl enable caddy
 
 Ensure ports 80 and 443 are accessible:
 
-```bash
+```
 # Check if ports are open
 sudo netstat -tlnp | grep -E ':(80|443)'
 
@@ -310,7 +310,7 @@ curl -I http://yourdomain.com
 
 Check DNS configuration:
 
-```bash
+```
 nslookup yourdomain.com
 dig yourdomain.com
 ```
@@ -319,7 +319,7 @@ dig yourdomain.com
 
 Validate before reloading:
 
-```bash
+```
 caddy validate --config /etc/caddy/Caddyfile
 ```
 
@@ -327,7 +327,7 @@ caddy validate --config /etc/caddy/Caddyfile
 
 Verify Mercury Core is running on the expected port:
 
-```bash
+```
 # Check if site container is running
 docker compose ps site
 
@@ -342,13 +342,13 @@ curl -k https://localhost:4443
 
 Check Caddy logs for renewal errors:
 
-```bash
+```
 sudo journalctl -u caddy --since "1 week ago" | grep -i renew
 ```
 
 Manually trigger renewal:
 
-```bash
+```
 caddy renew --config /etc/caddy/Caddyfile
 ```
 
@@ -358,7 +358,7 @@ caddy renew --config /etc/caddy/Caddyfile
 
 Only expose necessary ports:
 
-```bash
+```
 # Allow HTTP and HTTPS
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
@@ -371,7 +371,7 @@ sudo ufw deny 4443/tcp
 
 Enable Caddy metrics endpoint:
 
-```caddy
+```
 {
     servers {
         metrics
@@ -385,11 +385,13 @@ Access metrics at `http://localhost:2019/metrics`.
 
 Configure log rotation to prevent disk space issues:
 
-```bash
+```
 sudo nano /etc/logrotate.d/caddy
 ```
 
-```
+Add this configuration:
+
+```text
 /var/log/caddy/*.log {
     daily
     rotate 14
@@ -407,7 +409,7 @@ sudo nano /etc/logrotate.d/caddy
 
 Add a health check endpoint:
 
-```caddy
+```
 yourdomain.com {
     handle /health {
         respond "OK" 200
@@ -425,7 +427,7 @@ Always test configuration changes with `caddy validate` before reloading in prod
 
 To run Caddy alongside Mercury Core, add to `compose.yml`:
 
-```yaml
+```
 services:
   # ... existing services ...
   
@@ -449,7 +451,7 @@ volumes:
 
 Then start all services:
 
-```bash
+```
 docker compose up -d
 ```
 

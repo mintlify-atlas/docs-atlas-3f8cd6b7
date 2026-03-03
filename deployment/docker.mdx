@@ -24,14 +24,14 @@ Mercury Core consists of three Docker containers:
 
 1. Clone the Mercury Core repository:
 
-```bash
+```
 git clone <repository-url>
 cd mercury-core
 ```
 
 2. Configure environment variables:
 
-```bash
+```
 cp Site/.env.example Site/.env
 ```
 
@@ -39,13 +39,13 @@ Edit `Site/.env` with your configuration (see [Environment Variables](#environme
 
 3. Start all services:
 
-```bash
+```
 docker compose up -d
 ```
 
 4. Check service health:
 
-```bash
+```
 docker compose ps
 docker compose logs -f
 ```
@@ -56,7 +56,7 @@ The site will be available at `https://localhost:4443`.
 
 The `compose.yml` file defines the complete Mercury Core stack:
 
-```yaml
+```
 services:
     database:
         build: ./Database
@@ -118,7 +118,7 @@ The database port (8000) exposes the SurrealDB admin interface. In production, r
 
 Create a `Site/.env` file based on `Site/.env.example`:
 
-```bash
+```
 ORIGIN=https://mercs.dev
 PORT=4443
 BODY_SIZE_LIMIT=1G
@@ -179,7 +179,7 @@ Built from `Economy/Dockerfile` using Go:
 
 ### Starting Services
 
-```bash
+```
 # Start all services in detached mode
 docker compose up -d
 
@@ -192,7 +192,7 @@ docker compose up -d --build
 
 ### Stopping Services
 
-```bash
+```
 # Stop all services
 docker compose down
 
@@ -205,7 +205,7 @@ docker compose stop site
 
 ### Viewing Logs
 
-```bash
+```
 # View logs from all services
 docker compose logs -f
 
@@ -218,7 +218,7 @@ docker compose logs --tail=100 database
 
 ### Rebuilding Containers
 
-```bash
+```
 # Rebuild all containers
 docker compose build
 
@@ -231,7 +231,7 @@ docker compose build --no-cache
 
 ### Restarting Services
 
-```bash
+```
 # Restart all services
 docker compose restart
 
@@ -241,7 +241,7 @@ docker compose restart economy
 
 ### Accessing Container Shell
 
-```bash
+```
 # Access site container
 docker compose exec site sh
 
@@ -266,7 +266,7 @@ The restart policy `unless-stopped` ensures services automatically restart after
 
 Verify all services are running correctly:
 
-```bash
+```
 # Check service status
 docker compose ps
 
@@ -284,7 +284,7 @@ curl -k https://localhost:4443
 
 To update to the latest version:
 
-```bash
+```
 # Pull latest code
 git pull
 
@@ -305,7 +305,7 @@ Always backup your data volumes before updating. See the [Database Deployment](/
 
 Check if database and economy services are running:
 
-```bash
+```
 docker compose ps database economy
 docker compose logs database economy
 ```
@@ -314,7 +314,7 @@ docker compose logs database economy
 
 Verify database is accessible:
 
-```bash
+```
 # Check if database is listening
 docker compose exec database netstat -tlnp | grep 8000
 
@@ -326,7 +326,7 @@ curl http://localhost:8000/health
 
 Ensure data directories have correct permissions:
 
-```bash
+```
 sudo chown -R $(id -u):$(id -g) ./data
 chmod -R 755 ./data
 ```
@@ -335,7 +335,7 @@ chmod -R 755 ./data
 
 Clean up unused Docker resources:
 
-```bash
+```
 # Remove unused containers, networks, images
 docker system prune -a
 

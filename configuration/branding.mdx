@@ -9,7 +9,7 @@ Mercury Core provides extensive branding and customization options to make your 
 
 The `Branding` section in `mercury.core.ts` controls your revival's visual identity:
 
-```typescript
+```
 Branding: {
   Favicon: "Branding/Favicon.svg",
   Icon: "Branding/Icon.svg",
@@ -34,7 +34,7 @@ Branding: {
   
   ```typescript
   Favicon: "Branding/Favicon.svg"
-  ```
+```
 </ParamField>
 
 <ParamField path="Icon" type="string" required>
@@ -44,7 +44,7 @@ Branding: {
   
   ```typescript
   Icon: "Branding/Icon.svg"
-  ```
+```
 </ParamField>
 
 <Tip>
@@ -58,7 +58,7 @@ SVG format is recommended for icons as they scale cleanly at any size.
   
   ```typescript
   Tagline: "Revival tagline"
-  ```
+```
   
   <Info>
   If set to an empty string, the tagline will not display.
@@ -81,14 +81,14 @@ SVG format is recommended for icons as they scale cleanly at any size.
     "Same nostalgia":
       "All of our clients will remain as vanilla as possible, to make sure it's exactly as you remember it.",
   }
-  ```
+```
 </ParamField>
 
 ### Customizing Descriptions
 
 You can add, remove, or modify feature descriptions to highlight what makes your revival unique:
 
-```typescript
+```
 Descriptions: {
   "Your unique feature": "Description of what makes your revival special",
   "Another feature": "More details about your revival",
@@ -100,7 +100,7 @@ Descriptions: {
 
 The `Images` section controls default images for places that don't have custom assets:
 
-```typescript
+```
 Images: {
   DefaultPlaceIcons: ["Images/DefaultIcon1.avif"],
   DefaultPlaceThumbnails: [
@@ -131,7 +131,7 @@ Providing multiple default images allows Mercury Core to randomly select from th
 
 Mercury Core supports custom CSS themes to completely transform the look of your revival:
 
-```typescript
+```
 Themes: [
   {
     Name: "Standard",
@@ -152,7 +152,7 @@ Themes: [
 
 You can offer multiple themes for users to choose from:
 
-```typescript
+```
 Themes: [
   {
     Name: "Light",
@@ -177,7 +177,7 @@ The first theme in the array is the default theme shown to new users.
 
 Customize your revival's currency symbol to give it a unique identity:
 
-```typescript
+```
 CurrencySymbol: "屌"
 ```
 

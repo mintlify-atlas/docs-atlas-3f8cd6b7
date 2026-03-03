@@ -39,7 +39,7 @@ Returns `200 OK` with no body on success.
 
 ### Example Request
 
-```bash
+```
 curl -X POST http://localhost:2009/transact \
   -H "Content-Type: application/json" \
   -d '{
@@ -60,7 +60,7 @@ The endpoint validates all transactions before execution:
 
 #### Insufficient Balance
 
-```json
+```
 {
   "From": "alice",
   "To": "bob",
@@ -73,7 +73,7 @@ Error: `insufficient balance: balance was X.XXXXXX unit, at least Y.YYYYYY unit 
 
 #### Missing Required Fields
 
-```json
+```
 {
   "From": "alice",
   "To": "bob",
@@ -85,7 +85,7 @@ Error: `transaction must have a note`
 
 #### Zero Amount Without Returns
 
-```json
+```
 {
   "From": "alice",
   "To": "bob",
@@ -98,7 +98,7 @@ Error: `transaction must have an amount or returns`
 
 #### Circular Transaction
 
-```json
+```
 {
   "From": "alice",
   "To": "alice",
@@ -111,7 +111,7 @@ Error: `circular transaction: alice -> alice`
 
 #### Empty Sender or Recipient
 
-```json
+```
 {
   "From": "",
   "To": "bob",
@@ -184,13 +184,13 @@ Returns a JSON array of transaction objects (up to 100 most recent).
 
 ### Example Request
 
-```bash
+```
 curl http://localhost:2009/transactions/alice
 ```
 
 ### Example Response
 
-```json
+```
 [
   {
     "Type": "Transaction",
@@ -227,11 +227,11 @@ curl http://localhost:2009/transactions/alice
 
 If a user has no transaction history:
 
-```bash
+```
 curl http://localhost:2009/transactions/newuser
 ```
 
-```json
+```
 []
 ```
 

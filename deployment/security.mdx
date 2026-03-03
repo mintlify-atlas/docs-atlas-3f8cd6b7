@@ -24,7 +24,7 @@ Before deploying Mercury Core to production, you MUST complete these security ta
 
 The `Site/.env.example` file contains default passwords that **must be changed**:
 
-```bash
+```
 ORIGIN=https://mercs.dev
 PORT=4443
 BODY_SIZE_LIMIT=1G
@@ -38,7 +38,7 @@ OPEN_CLOUD_KEY=whatever          # CHANGE THIS
 
 Generate cryptographically secure passwords:
 
-```bash
+```
 # Generate random 32-character password
 openssl rand -base64 32
 
@@ -53,7 +53,7 @@ tr -dc 'A-Za-z0-9!@#$%^&*' < /dev/urandom | head -c 32
 
 Example production configuration:
 
-```bash
+```
 ORIGIN=https://yourdomain.com
 PORT=4443
 BODY_SIZE_LIMIT=1G
@@ -67,7 +67,7 @@ OPEN_CLOUD_KEY=eF1$gH5#jK9@mN3pQ7rT2uW6xY0
 
 Protect your `.env` file from unauthorized access:
 
-```bash
+```
 # Set restrictive permissions (owner read/write only)
 chmod 600 Site/.env
 
@@ -89,7 +89,7 @@ Never commit `.env` files to version control. Ensure `.env` is listed in `.gitig
 
 The database service in `compose.yml` uses default credentials:
 
-```yaml
+```
 # INSECURE DEFAULT - CHANGE THIS
 database:
     command:
@@ -101,7 +101,7 @@ database:
 
 Update to secure credentials:
 
-```yaml
+```
 database:
     command:
         - start
@@ -114,7 +114,7 @@ database:
 
 Store `DB_PASSWORD` in a `.env` file at the repository root:
 
-```bash
+```
 DB_PASSWORD=your_secure_database_password_here
 ```
 
@@ -122,7 +122,7 @@ DB_PASSWORD=your_secure_database_password_here
 
 By default, the database port is exposed to all interfaces. Restrict to localhost:
 
-```yaml
+```
 database:
     ports:
         - 127.0.0.1:8000:8000  # Only accessible from host
@@ -131,7 +131,7 @@ database:
 
 Or remove port exposure entirely if only accessed via Docker network:
 
-```yaml
+```
 database:
     expose:
         - 8000  # Accessible only from other containers
@@ -142,7 +142,7 @@ database:
 
 For encrypted database connections:
 
-```yaml
+```
 database:
     command:
         - start
@@ -158,7 +158,7 @@ database:
 
 Generate self-signed certificates for internal use:
 
-```bash
+```
 mkdir -p certs
 openssl req -x509 -newkey rsa:4096 -nodes \
   -keyout certs/db.key \
@@ -174,7 +174,7 @@ chmod 600 certs/db.key
 
 Configure UFW (Uncomplicated Firewall) to restrict access:
 
-```bash
+```
 # Enable UFW
 sudo ufw enable
 
@@ -203,7 +203,7 @@ Always allow SSH (port 22) before enabling the firewall, or you may lock yoursel
 
 Ensure backend services are not directly accessible:
 
-```bash
+```
 # Deny direct access to application port
 sudo ufw deny 4443/tcp
 
@@ -220,7 +220,7 @@ Access should only be through Caddy reverse proxy on ports 80/443.
 
 Create isolated networks for service communication:
 
-```yaml
+```
 networks:
   frontend:
     # Exposed to internet via Caddy
@@ -269,13 +269,13 @@ yourdomain.com {
     # Caddy handles TLS automatically
     # ... reverse_proxy config ...
 }
-```
+```caddy
 
 ### Enforce HTTPS
 
 Caddy redirects HTTP to HTTPS by default. Verify with:
 
-```bash
+```
 curl -I http://yourdomain.com
 # Should see: HTTP/1.1 308 Permanent Redirect
 # Location: https://yourdomain.com/
@@ -341,7 +341,7 @@ yourdomain.com {
 
 Modify Dockerfiles to use non-root users:
 
-```dockerfile
+```
 # Site Dockerfile example
 FROM oven/bun AS release
 
@@ -359,7 +359,7 @@ ENTRYPOINT ["bun", "-b", "./build"]
 
 Prevent resource exhaustion attacks:
 
-```yaml
+```
 services:
   site:
     deploy:
@@ -390,7 +390,7 @@ services:
 
 For containers that don't need write access:
 
-```yaml
+```
 services:
   site:
     read_only: true
@@ -403,7 +403,7 @@ services:
 
 Scan images for vulnerabilities:
 
-```bash
+```
 # Scan all images
 docker scout cves mercury-core-site
 docker scout cves mercury-core-database
@@ -419,12 +419,12 @@ trivy image mercury-core-site:latest
 
 Secure SSH access to your server:
 
-```bash
+```
 # Edit SSH config
 sudo nano /etc/ssh/sshd_config
 ```
 
-Recommended settings:
+Recommended settings in `/etc/ssh/sshd_config`:
 
 ```
 PermitRootLogin no
@@ -436,7 +436,7 @@ AllowUsers your_username
 
 Restart SSH:
 
-```bash
+```
 sudo systemctl restart sshd
 ```
 
@@ -444,7 +444,7 @@ sudo systemctl restart sshd
 
 Disable password authentication:
 
-```bash
+```
 # Generate SSH key pair (on your local machine)
 ssh-keygen -t ed25519 -C "your_email@example.com"
 
@@ -462,14 +462,16 @@ ssh user@your-server
 
 Limit sudo access to specific commands:
 
-```bash
+```
 # Edit sudoers file
 sudo visudo
+```
 
+```
 # Allow user to restart services without password
 username ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart caddy
 username ALL=(ALL) NOPASSWD: /usr/bin/docker compose
-```
+```caddy
 
 ## Monitoring and Logging
 
@@ -477,7 +479,7 @@ username ALL=(ALL) NOPASSWD: /usr/bin/docker compose
 
 Configure Docker logging driver:
 
-```yaml
+```
 services:
   site:
     logging:
@@ -491,14 +493,16 @@ services:
 
 Install and configure fail2ban:
 
-```bash
+```
 sudo apt install fail2ban
+```
 
+```
 # Configure for SSH
 sudo nano /etc/fail2ban/jail.local
 ```
 
-```ini
+```
 [sshd]
 enabled = true
 port = 22
@@ -508,7 +512,7 @@ maxretry = 3
 bantime = 3600
 ```
 
-```bash
+```
 sudo systemctl enable fail2ban
 sudo systemctl start fail2ban
 ```
@@ -540,7 +544,7 @@ Ensure application logs don't contain sensitive data:
 
 Encrypt backup files before storing:
 
-```bash
+```
 # Create encrypted backup
 tar -czf - ./data/surreal | openssl enc -aes-256-cbc -pbkdf2 -out backup-encrypted.tar.gz.enc
 
@@ -557,7 +561,7 @@ openssl enc -d -aes-256-cbc -pbkdf2 -in backup-encrypted.tar.gz.enc | tar -xzf -
 
 ### Backup Access Control
 
-```bash
+```
 # Restrict backup directory permissions
 chmod 700 ./backups
 chown root:root ./backups
@@ -572,7 +576,7 @@ chmod 600 ./backups/*
 
 Keep system packages up to date:
 
-```bash
+```
 # Update package list
 sudo apt update
 
@@ -588,7 +592,7 @@ sudo dpkg-reconfigure --priority=low unattended-upgrades
 
 Regularly update base images:
 
-```bash
+```
 # Pull latest base images
 docker pull oven/bun:latest
 docker pull surrealdb/surrealdb:v3.0.1
@@ -603,7 +607,7 @@ docker compose up -d
 
 Keep application dependencies current:
 
-```bash
+```
 # Update Bun dependencies
 cd Site
 bun update
@@ -654,7 +658,7 @@ In case of security incident:
 
 ### Emergency Shutdown
 
-```bash
+```
 # Immediately stop all services
 docker compose down
 

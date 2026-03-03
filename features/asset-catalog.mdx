@@ -69,7 +69,7 @@ Users can create assets through the Develop section (`/develop/create`).
 
 Asset creation costs currency to prevent abuse:
 
-```typescript
+```
 // Fee calculation based on base fee
 const fee = 0.1
 const assetPrice = Math.round(fee * 75 * 1e6)
@@ -219,7 +219,7 @@ The asset page (`/catalog/{id}/{name}`) displays complete asset information.
 
 Purchases create economy transactions:
 
-```typescript
+```
 {
   From: buyerId,
   To: creatorId,

@@ -13,7 +13,7 @@ Retrieve detailed information about a user by username.
 
 ### Request
 
-```http
+```
 GET /user/{username}
 ```
 
@@ -118,7 +118,7 @@ Update the current user's profile information.
 
 ### Request
 
-```http
+```
 POST /settings?/profile
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -157,7 +157,7 @@ Update the current user's password.
 
 ### Request
 
-```http
+```
 POST /settings?/password
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -208,7 +208,7 @@ Set custom CSS for the user's profile.
 
 ### Request
 
-```http
+```
 POST /settings?/styling
 Content-Type: application/x-www-form-urlencoded
 ```
@@ -237,7 +237,7 @@ Manage user relationships including following, friends, and friend requests.
 
 ### Follow User
 
-```http
+```
 POST /user/{username}?/follow
 ```
 
@@ -251,7 +251,7 @@ Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:129-136`
 
 ### Unfollow User
 
-```http
+```
 POST /user/{username}?/unfollow
 ```
 
@@ -265,7 +265,7 @@ Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:137-140`
 
 ### Send Friend Request
 
-```http
+```
 POST /user/{username}?/request
 ```
 
@@ -282,7 +282,7 @@ Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:145-165`
 
 ### Cancel Friend Request
 
-```http
+```
 POST /user/{username}?/cancel
 ```
 
@@ -296,7 +296,7 @@ Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:167-170`
 
 ### Accept Friend Request
 
-```http
+```
 POST /user/{username}?/accept
 ```
 
@@ -313,7 +313,7 @@ Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:175-182`
 
 ### Decline Friend Request
 
-```http
+```
 POST /user/{username}?/decline
 ```
 
@@ -327,7 +327,7 @@ Source: `Site/src/routes/(main)/user/[username]/+page.server.ts:171-174`
 
 ### Unfriend User
 
-```http
+```
 POST /user/{username}?/unfriend
 ```
 
@@ -347,7 +347,7 @@ Request a re-render of a user's avatar. Requires administrator privileges.
 
 ### Request
 
-```http
+```
 POST /user/{username}?/rerender
 ```
 

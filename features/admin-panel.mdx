@@ -329,7 +329,7 @@ Only available when `Registration.Keys.Enabled` is true.
     - **Status:** Active/Disabled
     
     **Key Format:**
-    ```
+```
     {prefix}{keyId}
     ```
     
@@ -361,7 +361,7 @@ Only available when `Registration.Keys.Enabled` is true.
 
 Set up registration keys in `Assets/schema.ts`:
 
-```typescript
+```
 Registration: {
   Keys: {
     Enabled: true,
@@ -548,7 +548,7 @@ Each log includes:
 
 Administrative code calls the audit function:
 
-```typescript
+```
 await db.run("fn::auditLog", [
   "Category",
   "Description of action",

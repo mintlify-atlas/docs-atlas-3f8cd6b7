@@ -84,7 +84,7 @@ Server utilities are in `Site/src/lib/server/`:
 
 SvelteKit provides automatic API routes through `+server.ts` files:
 
-```typescript
+```
 // Example: POST endpoint
 export const POST = async ({ request, locals }) => {
   const user = locals.user; // From session
@@ -99,7 +99,7 @@ export const POST = async ({ request, locals }) => {
 
 Configured in `Site/.env`:
 
-```bash
+```
 # SurrealDB connection
 SURREAL_URL=ws://localhost:8000
 SURREAL_USER=root
@@ -117,7 +117,7 @@ PUBLIC_SITE_URL=https://example.com
 
 Start the dev server:
 
-```bash
+```
 cd Site
 bun install
 bun dev
@@ -131,7 +131,7 @@ Vite provides:
 
 ### Production Build
 
-```bash
+```
 bun run build    # Build for production
 bun preview      # Preview production build locally
 bun ./build      # Start production server
@@ -150,12 +150,12 @@ SurrealDB serves as the primary database, running on port 8000.
 ### Starting the Database
 
 **Development** (auto-started by Site service):
-```bash
+```
 surreal start -u=root -p=root surrealkv://data/surreal
 ```
 
 **Production** (via Docker Compose):
-```yaml
+```
 services:
   database:
     build: ./Database
@@ -174,7 +174,7 @@ services:
 
 The Site service connects via WebSocket (Site/src/lib/server/surreal.ts:36-93):
 
-```typescript
+```
 const db = new Surreal({
   codecOptions: {
     useNativeDates: true,
@@ -209,7 +209,7 @@ See [Database](/concepts/database) for detailed schema documentation.
 
 SurrealDB supports optimistic concurrency. The Site service automatically retries failed transactions:
 
-```typescript
+```
 db.query = async (query, bindings) => {
   try {
     return await ogq(query, bindings);
@@ -227,7 +227,7 @@ db.query = async (query, bindings) => {
 
 The Site service defines TypeScript types for all database tables (Site/src/lib/server/surreal.ts:101-186):
 
-```typescript
+```
 type RecordIdTypes = {
   user: string
   asset: number
@@ -265,14 +265,14 @@ The Economy service is intentionally simple and focused:
 ### Starting the Service
 
 **Development** (auto-started by Site service):
-```bash
+```
 cd Economy
 go build
 ./Economy
 ```
 
 **Production** (via Docker Compose):
-```yaml
+```
 services:
   economy:
     build: ./Economy
@@ -298,7 +298,7 @@ Get a user's currency balance.
 Get last 100 transactions for a user.
 
 **Response**:
-```json
+```
 [
   {
     "Type": "Transaction",
@@ -320,7 +320,7 @@ Get last 100 transactions across entire economy (admin only).
 Execute a transaction between two users.
 
 **Request Body**:
-```json
+```
 {
   "From": "user:alice",
   "To": "user:bob",
@@ -335,7 +335,7 @@ Execute a transaction between two users.
 Create new currency (admin only).
 
 **Request Body**:
-```json
+```
 {
   "To": "user:alice",
   "Amount": 10000000,
@@ -347,7 +347,7 @@ Create new currency (admin only).
 Destroy currency (e.g., creation fees).
 
 **Request Body**:
-```json
+```
 {
   "From": "user:alice",
   "Amount": 7500000,
@@ -366,7 +366,7 @@ Grant daily stipend to a user (12-hour cooldown).
 
 The Site service includes a typed client (Site/src/lib/server/economy.ts):
 
-```typescript
+```
 import { getBalance, transact } from '$lib/server/economy';
 
 // Get user balance
@@ -395,7 +395,7 @@ if (!txResult.ok) {
 
 The Site service defines standard pricing (Site/src/lib/server/economy.ts:126-132):
 
-```typescript
+```
 export const fee = 0.1;
 const getFeeBasedPrice = (multiplier: number) =>
   Math.round(fee * multiplier * 1e6);
@@ -421,7 +421,7 @@ The service loads the entire ledger into memory and calculates current state on 
 
 ## Service Dependencies
 
-```mermaid
+```
 graph TD
     Site[Site Service] --> DB[Database Service]
     Site --> Econ[Economy Service]
@@ -436,7 +436,7 @@ graph TD
 
 In development, the Site service manages child processes for dependencies. In production, Docker Compose handles orchestration with proper dependency ordering:
 
-```yaml
+```
 site:
   depends_on:
     - database

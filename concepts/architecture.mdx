@@ -7,7 +7,7 @@ Mercury Core is built as a modern, microservices-oriented platform with three ma
 
 ## Architecture Overview
 
-```mermaid
+```
 graph TB
     Client[Web Browser] --> Caddy[Caddy Reverse Proxy]
     Caddy --> Site[Site Service<br/>SvelteKit + TypeScript]
@@ -29,7 +29,7 @@ graph TB
     style Econ fill:#4ecdc4
     style DB fill:#95e1d3
     style Caddy fill:#f38181
-```
+```caddy
 
 ## Core Components
 
@@ -76,7 +76,7 @@ SurrealDB runs on port 8000 and uses the SurrealKV storage engine.
 
 ## Service Communication
 
-```mermaid
+```
 sequenceDiagram
     participant User
     participant Site
@@ -121,7 +121,7 @@ sequenceDiagram
 
 ### Development Mode
 
-```bash
+```
 # Site service starts both SurrealDB and Economy automatically
 bun dev
 ```
@@ -130,7 +130,7 @@ The Site service manages child processes for dependencies when running in develo
 
 ### Production Mode
 
-```mermaid
+```
 graph LR
     Internet --> Caddy
     Caddy --> Site[Site:4443]
@@ -175,14 +175,14 @@ Production deployments use Docker Compose to orchestrate all three services:
 The Site service includes built-in process management for its dependencies:
 
 **SurrealDB Lifecycle** (Site/src/lib/server/process/surreal.ts:6-40)
-```typescript
+```
 // Automatically starts SurrealDB if not running
 // Manages graceful shutdown on exit
 // Monitors process health
 ```
 
 **Economy Service Lifecycle** (Site/src/lib/server/process/economy.ts:7-46)
-```typescript
+```
 // Auto-builds from Go source if needed
 // Spawns process and monitors health
 // Coordinates shutdown with main process

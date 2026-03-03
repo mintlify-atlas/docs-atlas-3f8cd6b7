@@ -27,7 +27,7 @@ If you don't have or can't install Docker, you can run the database and economy 
     ```bash
     git clone <repository-url>
     cd mercury-core
-    ```
+```
   </Step>
 
   <Step title="Install dependencies">
@@ -35,7 +35,7 @@ If you don't have or can't install Docker, you can run the database and economy 
     
     ```bash
     bun i
-    ```
+```
   </Step>
 
   <Step title="Configure environment variables">
@@ -43,7 +43,7 @@ If you don't have or can't install Docker, you can run the database and economy 
     
     ```bash
     cp Site/.env.example Site/.env
-    ```
+```
     
     Edit `Site/.env` to configure your environment variables:
     
@@ -55,7 +55,7 @@ If you don't have or can't install Docker, you can run the database and economy 
     RCC_KEY=password
     GAMESERVER_KEY=password
     OPEN_CLOUD_KEY=whatever
-    ```
+```
     
     <Note>
     The password, port, and RCCService key may be changed as required for your setup.
@@ -67,7 +67,7 @@ If you don't have or can't install Docker, you can run the database and economy 
     
     ```bash
     docker compose up -d database economy
-    ```
+```
     
     This starts:
     - **Database** (SurrealDB) on port 8000
@@ -80,7 +80,7 @@ If you don't have or can't install Docker, you can run the database and economy 
     ```bash
     cd Site
     bun dev
-    ```
+```
     
     Navigate to the link shown in your terminal (remember not to use HTTPS for local development).
   </Step>
@@ -104,7 +104,7 @@ If you can't install Docker, you can run the services manually:
     
     ```bash
     surreal start -l trace -u=root -p=root file:./data/surreal
-    ```
+```
     
     Keep this terminal window open or run it in the background.
   </Step>
@@ -119,7 +119,7 @@ If you can't install Docker, you can run the services manually:
     ```bash
     cd Economy
     go run .
-    ```
+```
     
     Keep this terminal window open or run it in the background.
   </Step>
@@ -179,7 +179,7 @@ The `compose.yml` file defines three services:
 
 ### Database Service
 
-```yaml
+```
 database:
   build: ./Database
   ports:
@@ -196,7 +196,7 @@ database:
 
 ### Economy Service
 
-```yaml
+```
 economy:
   build: ./Economy
   ports:
@@ -208,7 +208,7 @@ economy:
 
 ### Site Service (Optional)
 
-```yaml
+```
 site:
   build: .
   ports:

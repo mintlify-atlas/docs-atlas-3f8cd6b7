@@ -23,7 +23,7 @@ Returns `200 OK` with no body on success. The stipend amount is minted directly 
 
 ### Example Request
 
-```bash
+```
 curl -X POST http://localhost:2009/stipend/alice
 ```
 
@@ -43,7 +43,7 @@ If the user attempts to claim before the 12-hour cooldown expires:
 
 **Status Code**: `400 Bad Request`
 
-```bash
+```
 curl -X POST http://localhost:2009/stipend/alice
 ```
 
@@ -57,7 +57,7 @@ If the user ID format is invalid:
 
 **Status Code**: `400 Bad Request`
 
-```bash
+```
 curl -X POST http://localhost:2009/stipend/
 ```
 
@@ -94,7 +94,7 @@ Returns the stipend amount as a plain text `uint64` integer representing micro-u
 
 ### Example Request
 
-```bash
+```
 curl http://localhost:2009/currentStipend
 ```
 
